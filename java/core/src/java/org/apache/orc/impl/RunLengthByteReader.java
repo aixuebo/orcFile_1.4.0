@@ -55,7 +55,7 @@ public class RunLengthByteReader {
       }
       used = numLiterals = 0;
       return;
-    } else if (control < 0x80) {//表示128,二进制10000000,即是一个字节
+    } else if (control < 0x80) {//表示128,二进制10000000,即是一个字节,因为负数都是比128大
       repeat = true;//说明重复
       numLiterals = control + RunLengthByteWriter.MIN_REPEAT_SIZE;//总重复的数量
       int val = input.read();//读取重复的字节
@@ -97,16 +97,17 @@ public class RunLengthByteReader {
     return result;
   }
 
+    //读取非null位置的值,存储到data中
   public void nextVector(ColumnVector previous, long[] data, long size)
       throws IOException {
-    previous.isRepeating = true;
+    previous.isRepeating = true;//初始化的时候表示都是相同的
     for (int i = 0; i < size; i++) {
-      if (!previous.isNull[i]) {
+      if (!previous.isNull[i]) {//只要该位置不是null,就读取一个字节存储到data中
         data[i] = next();
       } else {
         // The default value of null for int types in vectorized
         // processing is 1, so set that if the value is null
-        data[i] = 1;
+        data[i] = 1;//null时候则赋予1
       }
 
       // The default value for nulls in Vectorization for int types is 1
@@ -114,9 +115,9 @@ public class RunLengthByteReader {
       // when determining the isRepeating flag.
       if (previous.isRepeating
           && i > 0
-          && ((data[0] != data[i]) ||
-              (previous.isNull[0] != previous.isNull[i]))) {
-        previous.isRepeating = false;
+          && ((data[0] != data[i]) || //说明元素与第0个不相同
+              (previous.isNull[0] != previous.isNull[i]))) {//或者不都是null
+        previous.isRepeating = false;//说明这里面元素不是重复的,因此初始化为false
       }
     }
   }
@@ -124,6 +125,7 @@ public class RunLengthByteReader {
   /**
    * Read the next size bytes into the data array, skipping over any slots
    * where isNull is true.
+   * 读取一组size长度字节,存储到data中。注意要跳过任何null为true的值,即虽然要填满size个data长度的字节,但null的值其实是没有存储的
    * @param isNull if non-null, skip any rows where isNull[r] is true
    * @param data the array to read into
    * @param size the number of elements to read
@@ -131,13 +133,13 @@ public class RunLengthByteReader {
    */
   public void nextVector(boolean[] isNull, int[] data,
                          long size) throws IOException {
-    if (isNull == null) {
-      for(int i=0; i < size; ++i) {
+    if (isNull == null) {//说明没有null,
+      for(int i=0; i < size; ++i) {//读取size个元素即可
         data[i] = next();
       }
     } else {
       for(int i=0; i < size; ++i) {
-        if (!isNull[i]) {
+        if (!isNull[i]) {//只存储非null位置的元素
           data[i] = next();
         }
       }
@@ -160,10 +162,11 @@ public class RunLengthByteReader {
     }
   }
 
+    //跳过若干个字节
   public void skip(long items) throws IOException {
     while (items > 0) {
       if (used == numLiterals) {
-        readValues(false);
+        readValues(false);//读取下一批
       }
       long consume = Math.min(items, numLiterals - used);
       used += consume;
