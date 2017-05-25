@@ -29,11 +29,10 @@ import org.apache.hadoop.hive.ql.exec.vector.ColumnVector;
  */
 public class RunLengthByteReader {
   private InStream input;
-  private final byte[] literals =
-    new byte[RunLengthByteWriter.MAX_LITERAL_SIZE];
-  private int numLiterals = 0;
-  private int used = 0;
-  private boolean repeat = false;
+  private final byte[] literals = new byte[RunLengthByteWriter.MAX_LITERAL_SIZE];//用于存储数据
+  private int numLiterals = 0;//已经存储多少个字节
+  private int used = 0;//已经消费literals队列的数据消费到哪个位置了
+  private boolean repeat = false;//是否开始重复了
 
   public RunLengthByteReader(InStream input) {
     this.input = input;
@@ -43,29 +42,33 @@ public class RunLengthByteReader {
     this.input = input;
   }
 
+    /**
+     * 读取一组字节数组
+     * @param ignoreEof true表示文件没有数据时候不报错,false表示需要报错
+     */
   private void readValues(boolean ignoreEof) throws IOException {
-    int control = input.read();
+    int control = input.read();//读取一个字节,表示数组长度
     used = 0;
-    if (control == -1) {
+    if (control == -1) {//说明没有字节了,有可能说明数组长度是-1,即有1个字节,因此不能抛异常
       if (!ignoreEof) {
         throw new EOFException("Read past end of buffer RLE byte from " + input);
       }
       used = numLiterals = 0;
       return;
-    } else if (control < 0x80) {
-      repeat = true;
-      numLiterals = control + RunLengthByteWriter.MIN_REPEAT_SIZE;
-      int val = input.read();
+    } else if (control < 0x80) {//表示128,二进制10000000,即是一个字节
+      repeat = true;//说明重复
+      numLiterals = control + RunLengthByteWriter.MIN_REPEAT_SIZE;//总重复的数量
+      int val = input.read();//读取重复的字节
       if (val == -1) {
         throw new EOFException("Reading RLE byte got EOF");
       }
-      literals[0] = (byte) val;
+      literals[0] = (byte) val;//设置具体的值
     } else {
-      repeat = false;
-      numLiterals = 0x100 - control;
+      repeat = false;//说明不是重复
+      numLiterals = 0x100 - control; //0x100表示256
       int bytes = 0;
-      while (bytes < numLiterals) {
-        int result = input.read(literals, bytes, numLiterals - bytes);
+      while (bytes < numLiterals) {//连续读取若干个字节
+        int result = input.read(literals, bytes, numLiterals - bytes);//读取的字节存储到字节数组中
         if (result == -1) {
           throw new EOFException("Reading RLE byte literal got EOF in " + this);
         }
@@ -74,18 +77,20 @@ public class RunLengthByteReader {
     }
   }
 
+    //说明literals字节数组还有数据,或者in还有数据
   public boolean hasNext() throws IOException {
     return used != numLiterals || input.available() > 0;
   }
 
+    //读取下一个字节
   public byte next() throws IOException {
     byte result;
     if (used == numLiterals) {
-      readValues(false);
+      readValues(false);//继续读取下一批字节数组
     }
     if (repeat) {
-      result = literals[0];
-    } else {
+      result = literals[0];//重复的话则每次读取第一个
+    } else {//读取下一个字节
       result = literals[used];
     }
     ++used;
