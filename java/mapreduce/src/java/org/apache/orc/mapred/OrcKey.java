@@ -37,6 +37,7 @@ import java.io.IOException;
 public final class OrcKey
     implements WritableComparable<OrcKey>, JobConfigurable {
 
+  //key的序列化值---该key可能是复杂对象对应的WritableComparable
   public WritableComparable key;
 
   public OrcKey(WritableComparable key) {
@@ -62,7 +63,7 @@ public final class OrcKey
     if (key == null) {
       TypeDescription schema =
           TypeDescription.fromString(OrcConf.MAPRED_SHUFFLE_KEY_SCHEMA
-              .getString(conf));
+              .getString(conf));//获取key对应的scheme
       key = OrcStruct.createValue(schema);
     }
   }

@@ -25,6 +25,8 @@ import java.util.List;
 /**
  * This class represents the fix from ORC-101 where we fixed the bloom filter
  * from using the JVM's default character set to always using UTF-8.
+ * 该对象将String转换成utf_8后,追加到BloomFilter中
+ *
  */
 public class BloomFilterUtf8 extends BloomFilter {
 
@@ -37,6 +39,12 @@ public class BloomFilterUtf8 extends BloomFilter {
   }
 
 
+    /**
+     * 计算过程:
+     * 1.将val进行字节数组转换
+     * 2.将字节数组转换成hash函数,hash的结果是long或者int或者多个long
+     * 3.将hash的结果经过多个hash函数,设置到BloomFilter中
+     */
   public void addString(String val) {
     if (val == null) {
       add(null);
@@ -45,6 +53,7 @@ public class BloomFilterUtf8 extends BloomFilter {
     }
   }
 
+  //校验参数是否已经在BloomFilter存在,true表示存在
   public boolean testString(String val) {
     if (val == null) {
       return test(null);

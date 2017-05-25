@@ -21,6 +21,7 @@ import org.apache.orc.ColumnStatistics;
 
 /**
  * Statistics for float and double columns.
+ * 对double类型的字段进行统计
  */
 public interface DoubleColumnStatistics extends ColumnStatistics {
 
@@ -28,6 +29,7 @@ public interface DoubleColumnStatistics extends ColumnStatistics {
    * Get the smallest value in the column. Only defined if getNumberOfValues
    * is non-zero.
    * @return the minimum
+   * 最小值
    */
   double getMinimum();
 
@@ -35,12 +37,14 @@ public interface DoubleColumnStatistics extends ColumnStatistics {
    * Get the largest value in the column. Only defined if getNumberOfValues
    * is non-zero.
    * @return the maximum
+   * 最大值
    */
   double getMaximum();
 
   /**
    * Get the sum of the values in the column.
    * @return the sum
+   * 求和
    */
   double getSum();
 }

@@ -19,6 +19,7 @@ package org.apache.orc.impl;
 
 /**
  * An interface for recording positions in a stream.
+ * RowIndexEntry对象是实现类,持有一个long类型的List
  */
 public interface PositionRecorder {
   void addPosition(long offset);

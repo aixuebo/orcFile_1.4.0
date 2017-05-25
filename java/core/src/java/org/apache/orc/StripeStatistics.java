@@ -21,7 +21,7 @@ package org.apache.orc;
 import org.apache.orc.impl.ColumnStatisticsImpl;
 
 import java.util.List;
-
+//描述一个Stripe的统计,一个Stripe中包含多个列,因此是多个列的统计集合
 public class StripeStatistics {
   private final List<OrcProto.ColumnStatistics> cs;
 
@@ -31,7 +31,7 @@ public class StripeStatistics {
 
   /**
    * Return list of column statistics
-   *
+   * 返回列的统计集合
    * @return column stats
    */
   public ColumnStatistics[] getColumnStatistics() {

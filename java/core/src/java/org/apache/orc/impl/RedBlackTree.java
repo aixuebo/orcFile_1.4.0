@@ -29,8 +29,8 @@ abstract class RedBlackTree {
   public static final int NULL = -1;
 
   // Various values controlling the offset of the data within the array.
-  private static final int LEFT_OFFSET = 0;
-  private static final int RIGHT_OFFSET = 1;
+  private static final int LEFT_OFFSET = 0;//左树位置
+  private static final int RIGHT_OFFSET = 1;//右树位置
   private static final int ELEMENT_SIZE = 2;
 
   protected int size = 0;

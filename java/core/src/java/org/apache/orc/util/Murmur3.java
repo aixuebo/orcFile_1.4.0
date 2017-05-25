@@ -32,7 +32,7 @@ package org.apache.orc.util;
  */
 public class Murmur3 {
   // from 64-bit linear congruential generator
-  public static final long NULL_HASHCODE = 2862933555777941757L;
+  public static final long NULL_HASHCODE = 2862933555777941757L;//代表null
 
   // Constants for 32 bit variant
   private static final int C1_32 = 0xcc9e2d51;
@@ -202,7 +202,7 @@ public class Murmur3 {
    * Murmur3 128-bit variant.
    *
    * @param data - input byte array
-   * @return - hashcode (2 longs)
+   * @return - hashcode (2 longs) 返回两个long
    */
   public static long[] hash128(byte[] data) {
     return hash128(data, 0, data.length, DEFAULT_SEED);
@@ -215,7 +215,7 @@ public class Murmur3 {
    * @param offset - the first element of array
    * @param length - length of array
    * @param seed   - seed. (default is 0)
-   * @return - hashcode (2 longs)
+   * @return - hashcode (2 longs) 返回两个long
    */
   public static long[] hash128(byte[] data, int offset, int length, int seed) {
     long h1 = seed;

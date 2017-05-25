@@ -21,7 +21,8 @@ import org.apache.orc.ColumnStatistics;
 
 /**
  * Statistics for binary columns.
+ * 因为二进制列不需要统计最大值和最小值,因此就只有sum
  */
 public interface BinaryColumnStatistics extends ColumnStatistics {
-  long getSum();
+  long getSum();//累加BytesWritable.getLength
 }

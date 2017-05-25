@@ -21,6 +21,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.orc.CompressionKind;
 
+/**
+ * 设置如何读取一个文件
+ */
 public final class DataReaderProperties {
 
   private final FileSystem fileSystem;

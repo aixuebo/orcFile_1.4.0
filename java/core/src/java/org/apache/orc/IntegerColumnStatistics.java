@@ -22,6 +22,7 @@ import org.apache.orc.ColumnStatistics;
 /**
  * Statistics for all of the integer columns, such as byte, short, int, and
  * long.
+ * 对整数类型的列进行统计
  */
 public interface IntegerColumnStatistics extends ColumnStatistics {
   /**
@@ -41,12 +42,14 @@ public interface IntegerColumnStatistics extends ColumnStatistics {
   /**
    * Is the sum defined? If the sum overflowed the counter this will be false.
    * @return is the sum available
+   * 是否定义了sum,如果sum溢出了,则会返回false
    */
   boolean isSumDefined();
 
   /**
    * Get the sum of the column. Only valid if isSumDefined returns true.
    * @return the sum of the column
+   * 返回sum的值
    */
   long getSum();
 }

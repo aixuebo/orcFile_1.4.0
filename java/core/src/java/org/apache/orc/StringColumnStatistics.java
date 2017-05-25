@@ -21,23 +21,27 @@ import org.apache.orc.ColumnStatistics;
 
 /**
  * Statistics for string columns.
+ * 对String类型的字段进行统计
  */
 public interface StringColumnStatistics extends ColumnStatistics {
   /**
    * Get the minimum string.
    * @return the minimum
+   * 最小值,该值是一个字符串
    */
   String getMinimum();
 
   /**
    * Get the maximum string.
    * @return the maximum
+   * 最大值
    */
   String getMaximum();
 
   /**
    * Get the total length of all strings
    * @return the sum (total length)
+   * 计算所有字符长度
    */
   long getSum();
 }

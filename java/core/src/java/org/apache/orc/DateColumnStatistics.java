@@ -23,17 +23,20 @@ import java.util.Date;
 
 /**
  * Statistics for DATE columns.
+ * 作为日期字段的统计
  */
 public interface DateColumnStatistics extends ColumnStatistics {
   /**
    * Get the minimum value for the column.
    * @return minimum value
+   * 统计最小日期
    */
   Date getMinimum();
 
   /**
    * Get the maximum value for the column.
    * @return maximum value
+   * 统计最大日期
    */
   Date getMaximum();
 }

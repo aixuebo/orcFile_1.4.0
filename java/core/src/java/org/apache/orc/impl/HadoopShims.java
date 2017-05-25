@@ -107,11 +107,12 @@ public interface HadoopShims {
   }
   /**
    * Read data into a Text object in the fastest way possible
+   * 读取字节,将其内容写入到Text中
    */
   public interface TextReaderShim {
     /**
      * @param txt
-     * @param size
+     * @param size 要读取的字节长度
      * @throws IOException
      */
     void read(Text txt, int size) throws IOException;

@@ -41,11 +41,12 @@ public class OrcTimestamp extends Timestamp implements WritableComparable<Date> 
 
   public OrcTimestamp(String timeStr) {
     super(0);
-    Timestamp t = Timestamp.valueOf(timeStr);
-    setTime(t.getTime());
-    setNanos(t.getNanos());
+    Timestamp t = Timestamp.valueOf(timeStr);//返回Timestamp类型
+    setTime(t.getTime());//设置时间
+    setNanos(t.getNanos());//设置毫秒
   }
 
+    //存储两个值,分别是时间和毫秒
   @Override
   public void write(DataOutput output) throws IOException {
     output.writeLong(getTime());

@@ -40,6 +40,8 @@ public interface MemoryManager {
      * @param newScale the current scale factor for memory allocations
      * @return true if the writer was over the limit
      * @throws IOException
+     * 根据当前负载情况,是否flush由每一个具体的writer决定
+     * 参数是负载情况,1表示内存非常充足.<1表示totalMemoryPool / totalAllocation;即越小,说明负载越严重
      */
     boolean checkMemory(double newScale) throws IOException;
   }
@@ -48,7 +50,8 @@ public interface MemoryManager {
    * Add a new writer's memory allocation to the pool. We use the path
    * as a unique key to ensure that we don't get duplicates.
    * @param path the file that is being written
-   * @param requestedAllocation the requested buffer size
+   * @param requestedAllocation the requested buffer size 该writer需要的内存
+   * 添加一个writer
    */
   void addWriter(Path path, long requestedAllocation,
                  Callback callback) throws IOException;
@@ -56,6 +59,7 @@ public interface MemoryManager {
   /**
    * Remove the given writer from the pool.
    * @param path the file that has been closed
+   * 删除一个writer
    */
   void removeWriter(Path path) throws IOException;
 
@@ -63,6 +67,7 @@ public interface MemoryManager {
    * Give the memory manager an opportunity for doing a memory check.
    * @param rows number of rows added
    * @throws IOException
+   * 已经产生多少行数据了,用于校验内存的伐值
    */
   void addedRow(int rows) throws IOException;
 }

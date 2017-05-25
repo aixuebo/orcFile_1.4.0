@@ -35,10 +35,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+/**
+ * 对一个schema类型的数据进行存储具体的值.按照属性不同,划分不同的值
+ */
 public final class OrcStruct implements WritableComparable<OrcStruct> {
 
-  private WritableComparable[] fields;
-  private final TypeDescription schema;
+  private WritableComparable[] fields;//该类型下所有的子类型,存储每一个类型对应的值
+  private final TypeDescription schema;//类型
 
   public OrcStruct(TypeDescription schema) {
     this.schema = schema;
@@ -47,7 +50,7 @@ public final class OrcStruct implements WritableComparable<OrcStruct> {
 
   public WritableComparable getFieldValue(int fieldIndex) {
     return fields[fieldIndex];
-  }
+  }//获取某一个列的类型
 
   public void setFieldValue(int fieldIndex, WritableComparable value) {
     fields[fieldIndex] = value;
@@ -55,12 +58,12 @@ public final class OrcStruct implements WritableComparable<OrcStruct> {
 
   public int getNumFields() {
     return fields.length;
-  }
+  }//列数量
 
   @Override
   public void write(DataOutput output) throws IOException {
-    for(WritableComparable field: fields) {
-      output.writeBoolean(field != null);
+    for(WritableComparable field: fields) {//将每一列的内容输出到output中
+      output.writeBoolean(field != null);//设置该列是否是null
       if (field != null) {
         field.write(output);
       }
@@ -72,7 +75,7 @@ public final class OrcStruct implements WritableComparable<OrcStruct> {
     for(int f=0; f < fields.length; ++f) {
       if (input.readBoolean()) {
         if (fields[f] == null) {
-          fields[f] = createValue(schema.getChildren().get(f));
+          fields[f] = createValue(schema.getChildren().get(f));//为每一个类型创建一个WritableComparable对象
         }
         fields[f].readFields(input);
       } else {
@@ -103,15 +106,17 @@ public final class OrcStruct implements WritableComparable<OrcStruct> {
     }
   }
 
+    //设置某一个列的值
   public void setFieldValue(String fieldName, WritableComparable value) {
-    int fieldIdx = schema.getFieldNames().indexOf(fieldName);
+    int fieldIdx = schema.getFieldNames().indexOf(fieldName);//找到下标
     if (fieldIdx == -1) {
       throw new IllegalArgumentException("Field " + fieldName +
           " not found in " + schema);
     }
-    fields[fieldIdx] = value;
+    fields[fieldIdx] = value;//设置该下标对应的值
   }
 
+    //获取该列对应的值
   public WritableComparable getFieldValue(String fieldName) {
     int fieldIdx = schema.getFieldNames().indexOf(fieldName);
     if (fieldIdx == -1) {
@@ -171,7 +176,7 @@ public final class OrcStruct implements WritableComparable<OrcStruct> {
   }
 
   /* Routines for stubbing into Writables */
-
+  //根据不同类型,转换成不同的序列化对象---该对象用于存储具体的值
   public static WritableComparable createValue(TypeDescription type) {
     switch (type.getCategory()) {
       case BOOLEAN: return new BooleanWritable();
@@ -187,11 +192,11 @@ public final class OrcStruct implements WritableComparable<OrcStruct> {
       case STRING:
         return new Text();
       case DATE:
-        return new DateWritable();
+        return new DateWritable();//以上都使用hadoop自带的序列化工具
       case TIMESTAMP:
         return new OrcTimestamp();
       case DECIMAL:
-        return new HiveDecimalWritable();
+        return new HiveDecimalWritable();//使用hive的序列化工具
       case STRUCT: {
         OrcStruct result = new OrcStruct(type);
         int c = 0;

@@ -27,15 +27,16 @@ import org.apache.hadoop.io.Text;
 /**
  * A class that is a growable array of bytes. Growth is managed in terms of
  * chunks that are allocated when needed.
+ * 动态字节数组
  */
 public final class DynamicByteArray {
-  static final int DEFAULT_CHUNKSIZE = 32 * 1024;
-  static final int DEFAULT_NUM_CHUNKS = 128;
+  static final int DEFAULT_CHUNKSIZE = 32 * 1024;//每一个数据块默认的字节数组
+  static final int DEFAULT_NUM_CHUNKS = 128;//默认产生多少个数据块
 
-  private final int chunkSize;        // our allocation sizes
+  private final int chunkSize;        // our allocation sizes 每一个数据块存储多少个字节
   private byte[][] data;              // the real data
-  private int length;                 // max set element index +1
-  private int initializedChunks = 0;  // the number of chunks created
+  private int length;                 // max set element index +1 最后一个位置
+  private int initializedChunks = 0;  // the number of chunks created 已经创建了多少个数据块
 
   public DynamicByteArray() {
     this(DEFAULT_NUM_CHUNKS, DEFAULT_CHUNKSIZE);
@@ -51,6 +52,7 @@ public final class DynamicByteArray {
 
   /**
    * Ensure that the given index is valid.
+   * 扩容数据块
    */
   private void grow(int chunkIndex) {
     if (chunkIndex >= initializedChunks) {
@@ -67,6 +69,7 @@ public final class DynamicByteArray {
     }
   }
 
+    //获取第几个位置上的字节
   public byte get(int index) {
     if (index >= length) {
       throw new IndexOutOfBoundsException("Index " + index +
@@ -78,6 +81,7 @@ public final class DynamicByteArray {
     return data[i][j];
   }
 
+    //向指定位置设置该值
   public void set(int index, byte value) {
     int i = index / chunkSize;
     int j = index % chunkSize;
@@ -88,6 +92,7 @@ public final class DynamicByteArray {
     data[i][j] = value;
   }
 
+  //自动追加一个字节
   public int add(byte value) {
     int i = length / chunkSize;
     int j = length % chunkSize;
@@ -104,6 +109,7 @@ public final class DynamicByteArray {
    * @param valueOffset the first location to copy from value
    * @param valueLength the number of bytes to copy from value
    * @return the offset of the start of the value
+   * 从length位置开始不断的追加字节,字节内容从value中读取.追加valueLength个字节
    */
   public int add(byte[] value, int valueOffset, int valueLength) {
     int i = length / chunkSize;
@@ -127,13 +133,14 @@ public final class DynamicByteArray {
    * Read the entire stream into this array.
    * @param in the stream to read from
    * @throws IOException
+   * 将in中所有的数据都读取到data中,从data的length位置开始写入in中的数据
    */
   public void readAll(InputStream in) throws IOException {
     int currentChunk = length / chunkSize;
     int currentOffset = length % chunkSize;
     grow(currentChunk);
     int currentLength = in.read(data[currentChunk], currentOffset,
-      chunkSize - currentOffset);
+      chunkSize - currentOffset);//将in中的数据写入到data中
     while (currentLength > 0) {
       length += currentLength;
       currentOffset = length % chunkSize;
@@ -151,9 +158,10 @@ public final class DynamicByteArray {
    * @param other source of the other bytes
    * @param otherOffset start offset in the other array
    * @param otherLength number of bytes in the other array
-   * @param ourOffset the offset in our array
-   * @param ourLength the number of bytes in our array
+   * @param ourOffset the offset in our array 本类的开始位置
+   * @param ourLength the number of bytes in our array 本类的长度
    * @return negative for less, 0 for equal, positive for greater
+   * 一个字节一个字节比较
    */
   public int compare(byte[] other, int otherOffset, int otherLength,
                      int ourOffset, int ourLength) {
@@ -202,6 +210,7 @@ public final class DynamicByteArray {
    * @param result the value to set
    * @param offset the start of the bytes to copy
    * @param length the number of bytes to copy
+   * 将本类中从offset位置开始读取的数据,写入到result中
    */
   public void setText(Text result, int offset, int length) {
     result.clear();
@@ -223,6 +232,7 @@ public final class DynamicByteArray {
    * @param offset the first offset to write
    * @param length the number of bytes to write
    * @throws IOException
+   * 将本类中从offset位置开始读取的数据,写入到out中
    */
   public void write(OutputStream out, int offset,
                     int length) throws IOException {
@@ -254,6 +264,7 @@ public final class DynamicByteArray {
     return sb.toString();
   }
 
+  //将本类中从offset位置开始读取的数据,写入到result中
   public void setByteBuffer(ByteBuffer result, int offset, int length) {
     result.clear();
     int currentChunk = offset / chunkSize;
@@ -272,6 +283,7 @@ public final class DynamicByteArray {
    * Gets all the bytes of the array.
    *
    * @return Bytes of the array
+   * 将全部字节返回
    */
   public byte[] get() {
     byte[] result = null;
@@ -296,6 +308,7 @@ public final class DynamicByteArray {
 
   /**
    * Get the size of the buffers.
+   * 一共需要多少个字节
    */
   public long getSizeInBytes() {
     return (long) initializedChunks * chunkSize;

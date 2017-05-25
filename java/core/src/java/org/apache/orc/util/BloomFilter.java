@@ -46,12 +46,12 @@ import java.util.List;
  */
 public class BloomFilter {
   public static final double DEFAULT_FPP = 0.05;
-  private final BitSet bitSet;
+  private final BitSet bitSet;//用于存储所有BloomFilter的结果
   private final int numBits;
-  private final int numHashFunctions;
+  private final int numHashFunctions;//相当于多少次hash
 
   static void checkArgument(boolean expression, String message) {
-    if (!expression) {
+    if (!expression) {//false就抛异常
       throw new IllegalArgumentException(message);
     }
   }
@@ -116,10 +116,17 @@ public class BloomFilter {
     // Lets split up 64-bit hashcode into two 32-bit hash codes and employ the technique mentioned
     // in the above paper
     long hash64 = val == null ? Murmur3.NULL_HASHCODE :
-        Murmur3.hash64(val, offset, length);
+        Murmur3.hash64(val, offset, length);//将value转换成long
     addHash(hash64);
   }
 
+    //真正对long类型的hash结果进行BloomFilter
+
+    /**
+     * 1.将val进行字节数组转换
+     * 2.将字节数组转换成hash函数,hash的结果是long或者int或者多个long
+     * 3.将hash的结果经过多个hash函数,设置到BloomFilter中
+     */
   private void addHash(long hash64) {
     int hash1 = (int) hash64;
     int hash2 = (int) (hash64 >>> 32);
@@ -161,6 +168,7 @@ public class BloomFilter {
     return testHash(hash64);
   }
 
+    //校验参数long是否已经在BloomFilter存在,true表示存在
   private boolean testHash(long hash64) {
     int hash1 = (int) hash64;
     int hash2 = (int) (hash64 >>> 32);
@@ -252,9 +260,9 @@ public class BloomFilter {
    * for index bounds nor expand the bit set size if the specified index is greater than the size.
    */
   public static class BitSet {
-    private final long[] data;
+    private final long[] data;//多少个long存储数据
 
-    public BitSet(long bits) {
+    public BitSet(long bits) {//多少个long可以满足bits个字节
       this(new long[(int) Math.ceil((double) bits / (double) Long.SIZE)]);
     }
 
@@ -282,6 +290,7 @@ public class BloomFilter {
      *
      * @param index - position
      * @return - value at the bit position
+     * 是否存在该值
      */
     public boolean get(int index) {
       return (data[index >>> 6] & (1L << index)) != 0;
@@ -289,6 +298,7 @@ public class BloomFilter {
 
     /**
      * Number of bits
+     * 最多允许存放多少个字节
      */
     public long bitSize() {
       return (long) data.length * Long.SIZE;
@@ -300,6 +310,7 @@ public class BloomFilter {
 
     /**
      * Combines the two BitArrays using bitwise OR.
+     * 进行or操作
      */
     public void putAll(BitSet array) {
       assert data.length == array.data.length :
@@ -311,6 +322,7 @@ public class BloomFilter {
 
     /**
      * Clear the bit set.
+     * 清空数据
      */
     public void clear() {
       Arrays.fill(data, 0);

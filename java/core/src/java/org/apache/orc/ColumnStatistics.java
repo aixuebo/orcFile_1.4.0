@@ -19,18 +19,21 @@ package org.apache.orc;
 
 /**
  * Statistics that are available for all types of columns.
+ * 所有类型的列都可以使用的统计
  */
 public interface ColumnStatistics {
   /**
    * Get the number of values in this column. It will differ from the number
    * of rows because of NULL values and repeated values.
    * @return the number of values
+   * 除了null和重复的值后,剩余多少个不同的值
    */
   long getNumberOfValues();
 
   /**
    * Returns true if there are nulls in the scope of column statistics.
    * @return true if null present else false
+   * true表示有null值存在
    */
   boolean hasNull();
 }

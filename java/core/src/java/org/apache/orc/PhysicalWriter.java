@@ -33,6 +33,7 @@ public interface PhysicalWriter {
 
   /**
    * The target of an output stream.
+   * 目标的一个输出流
    */
   interface OutputReceiver {
     /**
@@ -51,6 +52,7 @@ public interface PhysicalWriter {
   /**
    * Writes the header of the file, which consists of the magic "ORC" bytes.
    * @throws IOException
+   * 写入文件头数据,比如orc的魔
    */
   void writeHeader() throws IOException;
 
@@ -58,6 +60,7 @@ public interface PhysicalWriter {
    * Create an OutputReceiver for the given name.
    * @param name the name of the stream
    * @throws IOException
+   * 创建一个本地输出流
    */
   OutputReceiver createDataStream(StreamName name) throws IOException;
 

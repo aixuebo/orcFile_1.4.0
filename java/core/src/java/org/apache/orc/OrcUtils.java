@@ -38,24 +38,24 @@ public class OrcUtils {
    * corresponds to columns a and b. Index 3,4 correspond to column c which is list&lt;string&gt; and
    * index 5 correspond to column d. After flattening list&lt;string&gt; gets 2 columns.
    *
-   * @param selectedColumns - comma separated list of selected column names
+   * @param selectedColumns - comma separated list of selected column names 选择的列集合,用逗号拆分
    * @param schema       - object schema
-   * @return - boolean array with true value set for the specified column names
+   * @return - boolean array with true value set for the specified column names,返回属性包含的哪些列,这些列对应的位置是true
    */
   public static boolean[] includeColumns(String selectedColumns,
                                          TypeDescription schema) {
-    int numFlattenedCols = schema.getMaximumId();
-    boolean[] results = new boolean[numFlattenedCols + 1];
+    int numFlattenedCols = schema.getMaximumId();//一共有多少个属性
+    boolean[] results = new boolean[numFlattenedCols + 1];//因为下标从1开始,因此结果是有+1
     if ("*".equals(selectedColumns)) {
-      Arrays.fill(results, true);
+      Arrays.fill(results, true);//设置所有列都是true
       return results;
     }
     if (selectedColumns != null &&
-        schema.getCategory() == TypeDescription.Category.STRUCT) {
-      List<String> fieldNames = schema.getFieldNames();
-      List<TypeDescription> fields = schema.getChildren();
+        schema.getCategory() == TypeDescription.Category.STRUCT) {//必须是struct类型
+      List<String> fieldNames = schema.getFieldNames();//所有属性集合
+      List<TypeDescription> fields = schema.getChildren();//所有属性对应的类型
       for (String column: selectedColumns.split((","))) {
-        TypeDescription col = findColumn(column, fieldNames, fields);
+        TypeDescription col = findColumn(column, fieldNames, fields);//找到选择的列对象类型
         if (col != null) {
           for(int i=col.getId(); i <= col.getMaximumId(); ++i) {
             results[i] = true;
@@ -66,6 +66,13 @@ public class OrcUtils {
     return results;
   }
 
+    /**
+     * 获取struct对象中columnName对应的属性对象类型
+     * @param columnName 要查找的属性名字
+     * @param fieldNames struct对象对应的属性名字集合
+     * @param fields struct对象每一个属性对应的对象集合
+     * @return
+     */
   private static TypeDescription findColumn(String columnName,
                                             List<String> fieldNames,
                                             List<TypeDescription> fields) {
@@ -80,12 +87,14 @@ public class OrcUtils {
     return null;
   }
 
+  //将typeDescr对象scheme整理成Type对象集合
   public static List<OrcProto.Type> getOrcTypes(TypeDescription typeDescr) {
     List<OrcProto.Type> result = new ArrayList<>();
     appendOrcTypes(result, typeDescr);
     return result;
   }
 
+  //将typeDescr对象scheme整理成Type对象集合
   private static void appendOrcTypes(List<OrcProto.Type> result, TypeDescription typeDescr) {
     OrcProto.Type.Builder type = OrcProto.Type.newBuilder();
     List<TypeDescription> children = typeDescr.getChildren();
@@ -451,16 +460,17 @@ public class OrcUtils {
   }
 
   /**
+   * 转换成类型对象
    * Translate the given rootColumn from the list of types to a TypeDescription.
-   * @param types all of the types
-   * @param rootColumn translate this type
+   * @param types all of the types 所有的类型
+   * @param rootColumn translate this type 要转换的类型序号
    * @return a new TypeDescription that matches the given rootColumn
    */
   public static
         TypeDescription convertTypeFromProtobuf(List<OrcProto.Type> types,
                                                 int rootColumn) {
-    OrcProto.Type type = types.get(rootColumn);
-    switch (type.getKind()) {
+    OrcProto.Type type = types.get(rootColumn);//找到要转换的具体类型对象
+    switch (type.getKind()) {//根据不同的类型,转换成类型对象
       case BOOLEAN:
         return TypeDescription.createBoolean();
       case BYTE:
@@ -504,7 +514,7 @@ public class OrcUtils {
       }
       case LIST:
         return TypeDescription.createList(
-            convertTypeFromProtobuf(types, type.getSubtypes(0)));
+            convertTypeFromProtobuf(types, type.getSubtypes(0)));//type.getSubtypes(0) 表示获取第一个子对象对应的ID
       case MAP:
         return TypeDescription.createMap(
             convertTypeFromProtobuf(types, type.getSubtypes(0)),

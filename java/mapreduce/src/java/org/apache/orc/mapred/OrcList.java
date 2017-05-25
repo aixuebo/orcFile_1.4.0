@@ -29,10 +29,11 @@ import java.util.Iterator;
 /**
  * An ArrayList implementation that implements Writable.
  * @param <E> the element type, which must be Writable
+ * 用List存储一个元素类型对应的value集合---value集合本身是WritableComparable对象
  */
 public class OrcList<E extends WritableComparable>
     extends ArrayList<E> implements WritableComparable<OrcList<E>> {
-  private final TypeDescription childSchema;
+  private final TypeDescription childSchema;//该集合包含的元素类型
 
   public OrcList(TypeDescription schema) {
     childSchema = schema.getChildren().get(0);
@@ -43,10 +44,11 @@ public class OrcList<E extends WritableComparable>
     childSchema = schema.getChildren().get(0);
   }
 
+  //写入每一个元素
   @Override
   public void write(DataOutput output) throws IOException {
     Iterator<E> itr = iterator();
-    output.writeInt(size());
+    output.writeInt(size());//写入list的size
     while (itr.hasNext()) {
       E obj = itr.next();
       output.writeBoolean(obj != null);

@@ -37,7 +37,7 @@ public class BufferChunk extends DiskRangeList {
   final ByteBuffer chunk;
 
   public BufferChunk(ByteBuffer chunk, long offset) {
-    super(offset, offset + chunk.remaining());
+    super(offset, offset + chunk.remaining());//第二个参数是end,因此是开始位置+剩余字节
     this.chunk = chunk;
   }
 
@@ -58,13 +58,14 @@ public class BufferChunk extends DiskRangeList {
         (chunk.isDirect() ? "direct" : "array-backed");
   }
 
+    //剪切原始字节数组.只要offset到end之间的内容,并且开始位置是offset+shiftBy进行读取
   @Override
   public DiskRange sliceAndShift(long offset, long end, long shiftBy) {
     assert offset <= end && offset >= this.offset && end <= this.end;
     assert offset + shiftBy >= 0;
-    ByteBuffer sliceBuf = chunk.slice();
-    int newPos = (int) (offset - this.offset);
-    int newLimit = newPos + (int) (end - offset);
+    ByteBuffer sliceBuf = chunk.slice();//复制,只是复制offset和limit之间的数据
+    int newPos = (int) (offset - this.offset);//移动到新的位置
+    int newLimit = newPos + (int) (end - offset);//limit为新的位置+长度
     try {
       sliceBuf.position(newPos);
       sliceBuf.limit(newLimit);

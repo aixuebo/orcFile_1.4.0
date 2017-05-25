@@ -44,19 +44,19 @@ public class PhysicalFsWriter implements PhysicalWriter {
 
   private static final int HDFS_BUFFER_SIZE = 256 * 1024;
 
-  private final FSDataOutputStream rawWriter;
+  private final FSDataOutputStream rawWriter;//文件系统的输出流
   // the compressed metadata information outStream
-  private OutStream writer = null;
+  private OutStream writer = null;//对rawWriter又进一步包装,里面包含额外的信息输出,比如元数据等
   // a protobuf outStream around streamFactory
   private CodedOutputStream protobufWriter = null;
 
-  private final Path path;
-  private final long blockSize;
-  private final int bufferSize;
+  private final Path path;//存储路径
+  private final long blockSize;//数据块大小
+  private final int bufferSize;//缓冲区
   private final double paddingTolerance;
   private final long defaultStripeSize;
-  private final CompressionKind compress;
-  private final CompressionCodec codec;
+  private final CompressionKind compress;//压缩算法
+  private final CompressionCodec codec;//压缩对象,根据压缩算法创建相应的压缩对象
   private final boolean addBlockPadding;
 
   // the streams that make up the current stripe
@@ -64,7 +64,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
     new TreeMap<>();
 
   private long adjustedStripeSize;
-  private long headerLength;
+  private long headerLength;//orc的头文件长度
   private long stripeStart;
   private int metadataLength;
   private int footerLength;
@@ -82,15 +82,15 @@ public class PhysicalFsWriter implements PhysicalWriter {
           opts.getSchema().getMaximumId() + 1,
           opts.getBufferSize());
     }
-    this.compress = opts.getCompress();
+    this.compress = opts.getCompress();//压缩算法
     this.paddingTolerance = opts.getPaddingTolerance();
     this.blockSize = opts.getBlockSize();
     LOG.info("ORC writer created for path: {} with stripeSize: {} blockSize: {}" +
         " compression: {} bufferSize: {}", path, defaultStripeSize, blockSize,
         compress, bufferSize);
     rawWriter = fs.create(path, false, HDFS_BUFFER_SIZE,
-        fs.getDefaultReplication(path), blockSize);
-    codec = OrcCodecPool.getCodec(compress);
+        fs.getDefaultReplication(path), blockSize);//创建文件系统的输出流
+    codec = OrcCodecPool.getCodec(compress);//根据压缩算法创建压缩对象
     writer = new OutStream("metadata", bufferSize, codec,
         new DirectStream(rawWriter));
     protobufWriter = CodedOutputStream.newInstance(writer);
@@ -152,14 +152,16 @@ public class PhysicalFsWriter implements PhysicalWriter {
   /**
    * An output receiver that writes the ByteBuffers to the output stream
    * as they are received.
+   * 不用任何包装容器,直接将数据写入到底层的输出中
    */
   private static class DirectStream implements OutputReceiver {
-    private final FSDataOutputStream output;
+    private final FSDataOutputStream output;//对应目标的输出流
 
     DirectStream(FSDataOutputStream output) {
       this.output = output;
     }
 
+      //将buffer的内容写入到output中
     @Override
     public void output(ByteBuffer buffer) throws IOException {
       output.write(buffer.array(), buffer.arrayOffset() + buffer.position(),
@@ -265,11 +267,13 @@ public class PhysicalFsWriter implements PhysicalWriter {
    * The TreeWriters write to the outStream and the codec compresses the
    * data as buffers fill up and stores them in the output list. When the
    * stripe is being written, the whole stream is written to the file.
+   * 内部先缓存一下
    */
   private static final class BufferedStream implements OutputReceiver {
     private boolean isSuppressed = false;
     private final List<ByteBuffer> output = new ArrayList<>();
 
+      //将该写入的流先缓存起来
     @Override
     public void output(ByteBuffer buffer) {
       if (!isSuppressed) {
@@ -277,6 +281,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
       }
     }
 
+      //清空out缓存队列
     public void suppress() {
       isSuppressed = true;
       output.clear();
@@ -288,7 +293,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
      */
     void spillToDiskAndClear(FSDataOutputStream raw
                                        ) throws IOException {
-      if (!isSuppressed) {
+      if (!isSuppressed) {//false表示将所有缓存的数据写入到磁盘中
         for (ByteBuffer buffer: output) {
           raw.write(buffer.array(), buffer.arrayOffset() + buffer.position(),
             buffer.remaining());
@@ -303,11 +308,12 @@ public class PhysicalFsWriter implements PhysicalWriter {
      *
      * Assumes the stream writing into this receiver has already been flushed.
      * @return number of bytes
+     * 获取缓存了多少个字节
      */
     public long getOutputSize() {
       long result = 0;
       for (ByteBuffer buffer: output) {
-        result += buffer.remaining();
+        result += buffer.remaining();//每一个缓存还有多少数据可以读
       }
       return result;
     }

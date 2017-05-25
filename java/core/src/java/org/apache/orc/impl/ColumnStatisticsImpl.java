@@ -39,6 +39,9 @@ import org.apache.orc.StringColumnStatistics;
 import org.apache.orc.TimestampColumnStatistics;
 import org.apache.orc.TypeDescription;
 
+/**
+ * 各自字段类型的统计实现
+ */
 public class ColumnStatisticsImpl implements ColumnStatistics {
 
   @Override
@@ -71,7 +74,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
 
   private static final class BooleanStatisticsImpl extends ColumnStatisticsImpl
       implements BooleanColumnStatistics {
-    private long trueCount = 0;
+    private long trueCount = 0;//true的个数
 
     BooleanStatisticsImpl(OrcProto.ColumnStatistics stats) {
       super(stats);
@@ -121,7 +124,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
     @Override
     public long getFalseCount() {
       return getNumberOfValues() - trueCount;
-    }
+    }//总数-true的个数
 
     @Override
     public long getTrueCount() {
@@ -169,7 +172,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
     private long maximum = Long.MIN_VALUE;
     private long sum = 0;
     private boolean hasMinimum = false;
-    private boolean overflow = false;
+    private boolean overflow = false;//true表示有sum
 
     IntegerStatisticsImpl() {
     }
@@ -177,7 +180,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
     IntegerStatisticsImpl(OrcProto.ColumnStatistics stats) {
       super(stats);
       OrcProto.IntegerStatistics intStat = stats.getIntStatistics();
-      if (intStat.hasMinimum()) {
+      if (intStat.hasMinimum()) {//hasMinimum 说明protobuf里面的option是有该属性的
         hasMinimum = true;
         minimum = intStat.getMinimum();
       }
@@ -201,6 +204,11 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
       overflow = false;
     }
 
+      /**
+       * 更新一个整数
+       * @param value
+       * @param repetitions 重复次数,用于计算sum
+       */
     @Override
     public void updateInteger(long value, int repetitions) {
       if (!hasMinimum) {
@@ -213,9 +221,9 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
         maximum = value;
       }
       if (!overflow) {
-        boolean wasPositive = sum >= 0;
+        boolean wasPositive = sum >= 0;//是否是正数
         sum += value * repetitions;
-        if ((value >= 0) == wasPositive) {
+        if ((value >= 0) == wasPositive) {//说明此时sum溢出了,符号变换了
           overflow = (sum >= 0) != wasPositive;
         }
       }
@@ -225,7 +233,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
     public void merge(ColumnStatisticsImpl other) {
       if (other instanceof IntegerStatisticsImpl) {
         IntegerStatisticsImpl otherInt = (IntegerStatisticsImpl) other;
-        if (!hasMinimum) {
+        if (!hasMinimum) {//说明本身没有最小值和最大值
           hasMinimum = otherInt.hasMinimum;
           minimum = otherInt.minimum;
           maximum = otherInt.maximum;
@@ -514,9 +522,9 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
 
   protected static final class StringStatisticsImpl extends ColumnStatisticsImpl
       implements StringColumnStatistics {
-    private Text minimum = null;
+    private Text minimum = null;//最小的字符串是哪个
     private Text maximum = null;
-    private long sum = 0;
+    private long sum = 0;// value.getLength();之和
 
     StringStatisticsImpl() {
     }
@@ -543,6 +551,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
       sum = 0;
     }
 
+      //更新一个值
     @Override
     public void updateString(Text value) {
       if (minimum == null) {
@@ -555,6 +564,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
       sum += value.getLength();
     }
 
+      //更新多个值
     @Override
     public void updateString(byte[] bytes, int offset, int length,
                              int repetitions) {
@@ -704,11 +714,13 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
       sum = 0;
     }
 
+      //更新一个value
     @Override
     public void updateBinary(BytesWritable value) {
       sum += value.getLength();
     }
 
+      //更新多个value
     @Override
     public void updateBinary(byte[] bytes, int offset, int length,
                              int repetitions) {
@@ -1255,11 +1267,11 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
     }
   }
 
-  private long count = 0;
-  private boolean hasNull = false;
+  private long count = 0;//多少个不同的属性值
+  private boolean hasNull = false;//是否有null
 
   ColumnStatisticsImpl(OrcProto.ColumnStatistics stats) {
-    if (stats.hasNumberOfValues()) {
+    if (stats.hasNumberOfValues()) {//说明设置了该属性
       count = stats.getNumberOfValues();
     }
 
@@ -1335,6 +1347,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
     throw new UnsupportedOperationException("Can't update timestamp");
   }
 
+    //true表示有统计存在,即要么有内容,要么有null,因为null不算到count里面
   public boolean isStatsExists() {
     return (count > 0 || hasNull == true);
   }
@@ -1364,6 +1377,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
     return "count: " + count + " hasNull: " + hasNull;
   }
 
+    //创建一个父类的统计对象
   public OrcProto.ColumnStatistics.Builder serialize() {
     OrcProto.ColumnStatistics.Builder builder =
       OrcProto.ColumnStatistics.newBuilder();
@@ -1372,6 +1386,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
     return builder;
   }
 
+    //根据不同类型创建对应的统计对象
   public static ColumnStatisticsImpl create(TypeDescription schema) {
     switch (schema.getCategory()) {
       case BOOLEAN:
@@ -1401,6 +1416,7 @@ public class ColumnStatisticsImpl implements ColumnStatistics {
     }
   }
 
+    //创建一个具体的列的统计对象
   public static ColumnStatisticsImpl deserialize(OrcProto.ColumnStatistics stats) {
     if (stats.hasBucketStatistics()) {
       return new BooleanStatisticsImpl(stats);

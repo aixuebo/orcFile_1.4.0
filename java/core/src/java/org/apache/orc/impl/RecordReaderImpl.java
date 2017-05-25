@@ -141,7 +141,7 @@ public class RecordReaderImpl implements RecordReader {
 
   /**
    * Given a list of column names, find the given column and return the index.
-   *
+   * 获取给定columnName列对应的序号
    * @param columnNames the list of potential column names
    * @param columnName  the column name to look for
    * @param rootColumn  offset the result with the rootColumn

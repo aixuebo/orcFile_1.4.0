@@ -20,6 +20,7 @@ package org.apache.orc.impl;
 
 /**
  * Statistics about the ACID operations in an ORC file
+ * 不需要统计select
  */
 public class AcidStats {
   public long inserts;
@@ -32,6 +33,7 @@ public class AcidStats {
     deletes = 0;
   }
 
+  //反序列化
   public AcidStats(String serialized) {
     String[] parts = serialized.split(",");
     inserts = Long.parseLong(parts[0]);
@@ -39,6 +41,7 @@ public class AcidStats {
     deletes = Long.parseLong(parts[2]);
   }
 
+  //序列化
   public String serialize() {
     StringBuilder builder = new StringBuilder();
     builder.append(inserts);

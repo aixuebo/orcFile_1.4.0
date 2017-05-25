@@ -28,25 +28,28 @@ import java.util.Properties;
 public enum OrcConf {
   STRIPE_SIZE("orc.stripe.size", "hive.exec.orc.default.stripe.size",
       64L * 1024 * 1024,
-      "Define the default ORC stripe size, in bytes."),
+      "Define the default ORC stripe size, in bytes."),//stripe的大小,默认64M
   BLOCK_SIZE("orc.block.size", "hive.exec.orc.default.block.size",
       256L * 1024 * 1024,
-      "Define the default file system block size for ORC files."),
+      "Define the default file system block size for ORC files."),//文件系统数据块大小,默认256M
+
   ENABLE_INDEXES("orc.create.index", "orc.create.index", true,
-      "Should the ORC writer create indexes as part of the file."),
+      "Should the ORC writer create indexes as part of the file."),//是否创建索引
   ROW_INDEX_STRIDE("orc.row.index.stride",
       "hive.exec.orc.default.row.index.stride", 10000,
       "Define the default ORC index stride in number of rows. (Stride is the\n"+
-          " number of rows n index entry represents.)"),
+          " number of rows n index entry represents.)"),//多少行进行一次索引
+
+
   BUFFER_SIZE("orc.compress.size", "hive.exec.orc.default.buffer.size",
-      256 * 1024, "Define the default ORC buffer size, in bytes."),
+      256 * 1024, "Define the default ORC buffer size, in bytes."),//缓冲区大小 256K
   BASE_DELTA_RATIO("orc.base.delta.ratio", "hive.exec.orc.base.delta.ratio", 8,
       "The ratio of base writer and delta writer in terms of STRIPE_SIZE and BUFFER_SIZE."),
   BLOCK_PADDING("orc.block.padding", "hive.exec.orc.default.block.padding",
       true,
       "Define whether stripes should be padded to the HDFS block boundaries."),
   COMPRESS("orc.compress", "hive.exec.orc.default.compress", "ZLIB",
-      "Define the default compression codec for ORC file"),
+      "Define the default compression codec for ORC file"),//输出的内容压缩方式
   WRITE_FORMAT("orc.write.format", "hive.exec.orc.write.format", "0.12",
       "Define the version of the file to write. Possible values are 0.11 and\n"+
           " 0.12. If this parameter is not defined, ORC will use the run\n" +
@@ -56,7 +59,7 @@ public enum OrcConf {
       "Define the encoding strategy to use while writing data. Changing this\n"+
           "will only affect the light weight encoding for integers. This\n" +
           "flag will not change the compression level of higher level\n" +
-          "compression codec (like ZLIB)."),
+          "compression codec (like ZLIB)."),//编码策略
   COMPRESSION_STRATEGY("orc.compression.strategy",
       "hive.exec.orc.compression.strategy", "SPEED",
       "Define the compression strategy to use while writing data.\n" +
@@ -87,9 +90,9 @@ public enum OrcConf {
       true,
       "Writers earlier than HIVE-4243 may have inaccurate schema metadata.\n"
           + "This setting will enable best effort schema evolution rather\n"
-          + "than rejecting mismatched schemas"),
+          + "than rejecting mismatched schemas"),//true表示容忍缺失schema
   MEMORY_POOL("orc.memory.pool", "hive.exec.orc.memory.pool", 0.5,
-      "Maximum fraction of heap that can be used by ORC file writers"),
+      "Maximum fraction of heap that can be used by ORC file writers"),//占用ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()整个堆内存的百分比
   DICTIONARY_KEY_SIZE_THRESHOLD("orc.dictionary.key.threshold",
       "hive.exec.orc.dictionary.key.size.threshold",
       0.8,
@@ -119,18 +122,21 @@ public enum OrcConf {
       "The maximum size of the file to read for finding the file tail. This\n" +
           "is primarily used for streaming ingest to read intermediate\n" +
           "footers while the file is still open"),
+
   MAPRED_INPUT_SCHEMA("orc.mapred.input.schema", null, null,
       "The schema that the user desires to read. The values are\n" +
-      "interpreted using TypeDescription.fromString."),
+      "interpreted using TypeDescription.fromString."),//输入的scheme
   MAPRED_SHUFFLE_KEY_SCHEMA("orc.mapred.map.output.key.schema", null, null,
       "The schema of the MapReduce shuffle key. The values are\n" +
-          "interpreted using TypeDescription.fromString."),
+          "interpreted using TypeDescription.fromString."),//shuffle中key的scheme,存储key类型的描述信息,用于确定scheme
   MAPRED_SHUFFLE_VALUE_SCHEMA("orc.mapred.map.output.value.schema", null, null,
       "The schema of the MapReduce shuffle value. The values are\n" +
-          "interpreted using TypeDescription.fromString."),
+          "interpreted using TypeDescription.fromString."),//shuffle中value的scheme,存储value的scheme
   MAPRED_OUTPUT_SCHEMA("orc.mapred.output.schema", null, null,
       "The schema that the user desires to write. The values are\n" +
-          "interpreted using TypeDescription.fromString."),
+          "interpreted using TypeDescription.fromString."),//输出的scheme
+
+
   INCLUDE_COLUMNS("orc.include.columns", "hive.io.file.readcolumn.ids", null,
       "The list of comma separated column ids that should be read with 0\n" +
           "being the first column, 1 being the next, and so on. ."),
@@ -176,6 +182,9 @@ public enum OrcConf {
     return description;
   }
 
+    /**
+     * 先从tbl中获取attribute,再从conf中获取attribute,最后再从conf中获取hiveConfName
+     */
   private String lookupValue(Properties tbl, Configuration conf) {
     String result = null;
     if (tbl != null) {

@@ -22,17 +22,20 @@ import java.sql.Timestamp;
 
 /**
  * Statistics for Timestamp columns.
+ * 对时间类型的字段进行统计
  */
 public interface TimestampColumnStatistics extends ColumnStatistics {
   /**
    * Get the minimum value for the column.
    * @return minimum value
+   * 最小时间
    */
   Timestamp getMinimum();
 
   /**
    * Get the maximum value for the column.
    * @return maximum value
+   * 最大时间
    */
   Timestamp getMaximum();
 }

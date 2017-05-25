@@ -158,7 +158,7 @@ public interface Reader {
     private Boolean skipCorruptRecords = null;
     private TypeDescription schema = null;
     private DataReader dataReader = null;
-    private Boolean tolerateMissingSchema = null;
+    private Boolean tolerateMissingSchema = null;//true表示容忍缺失schema
     private boolean forcePositionalEvolution;
 
     public Options() {

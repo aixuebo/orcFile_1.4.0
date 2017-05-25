@@ -65,39 +65,40 @@ message TimestampStatistics {
 
 message BinaryStatistics {
   // sum will store the total binary blob length in a stripe
-  optional sint64 sum = 1;
+  optional sint64 sum = 1;//计算字节数量
 }
 
+//对列如何进行统计
 message ColumnStatistics {
-  optional uint64 numberOfValues = 1;
-  optional IntegerStatistics intStatistics = 2;
+  optional uint64 numberOfValues = 1;//有多少个不同的值
+  optional IntegerStatistics intStatistics = 2;//该列对应的int统计内容.即该列是int类型的
   optional DoubleStatistics doubleStatistics = 3;
   optional StringStatistics stringStatistics = 4;
-  optional BucketStatistics bucketStatistics = 5;
+  optional BucketStatistics bucketStatistics = 5;//boolean类型的列的统计
   optional DecimalStatistics decimalStatistics = 6;
   optional DateStatistics dateStatistics = 7;
   optional BinaryStatistics binaryStatistics = 8;
   optional TimestampStatistics timestampStatistics = 9;
-  optional bool hasNull = 10;
+  optional bool hasNull = 10;//该列是否有null这个属性值
 }
 
 message RowIndexEntry {
-  repeated uint64 positions = 1 [packed=true];
+  repeated uint64 positions = 1 [packed=true];//repeated 表示一个List或者vector,存储若干个long值
   optional ColumnStatistics statistics = 2;
 }
 
 message RowIndex {
-  repeated RowIndexEntry entry = 1;
+  repeated RowIndexEntry entry = 1;//一个List持有RowIndexEntry,即long类型的二维数组
 }
 
 message BloomFilter {
-  optional uint32 numHashFunctions = 1;
-  repeated fixed64 bitset = 2;
+  optional uint32 numHashFunctions = 1;//表示多少个hash函数
+  repeated fixed64 bitset = 2;//若干个long类型组成的bitset,里面是有内容的,即BloomFilter已经设置好的内容
   optional bytes utf8bitset = 3;
 }
 
 message BloomFilterIndex {
-  repeated BloomFilter bloomFilter = 1;
+  repeated BloomFilter bloomFilter = 1;//持有若干个BloomFilter
 }
 
 message Stream {
@@ -111,8 +112,8 @@ message Stream {
     DICTIONARY_COUNT = 4;
     SECONDARY = 5;
     ROW_INDEX = 6;
-    BLOOM_FILTER = 7;
-    BLOOM_FILTER_UTF8 = 8;
+    BLOOM_FILTER = 7;//BloomFilterUtf8或者BloomFilter
+    BLOOM_FILTER_UTF8 = 8;//BloomFilterUtf8
   }
   optional Kind kind = 1;
   optional uint32 column = 2;
@@ -142,7 +143,7 @@ message StripeFooter {
 }
 
 message Type {
-  enum Kind {
+  enum Kind {//定义列的类型
     BOOLEAN = 0;
     BYTE = 1;
     SHORT = 2;
@@ -162,12 +163,12 @@ message Type {
     VARCHAR = 16;
     CHAR = 17;
   }
-  optional Kind kind = 1;
-  repeated uint32 subtypes = 2 [packed=true];
-  repeated string fieldNames = 3;
-  optional uint32 maximumLength = 4;
-  optional uint32 precision = 5;
-  optional uint32 scale = 6;
+  optional Kind kind = 1;//定义列的类型
+  repeated uint32 subtypes = 2 [packed=true];//在复杂集合中都需要该对象,该对象存储子对象对应的ID
+  repeated string fieldNames = 3;//在STRUCT中需要该字段
+  optional uint32 maximumLength = 4;//char和VARCHAR时候要定义该字段
+  optional uint32 precision = 5;//DECIMAL时候要定义该字段
+  optional uint32 scale = 6;//DECIMAL时候要定义该字段
 }
 
 message StripeInformation {

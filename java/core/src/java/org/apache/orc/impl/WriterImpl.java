@@ -171,7 +171,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
       this.bufferSize = opts.getBufferSize();
     } else {
       this.bufferSize = getEstimatedBufferSize(defaultStripeSize,
-          numColumns, opts.getBufferSize());
+          numColumns, opts.getBufferSize());//预估buffer缓冲区大小
     }
     if (version == OrcFile.Version.V_0_11) {
       /* do not write bloom filters for ORC v11 */
@@ -205,14 +205,15 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     // This keeps buffers small enough that we don't get really small stripe
     // sizes.
     int estBufferSize = (int) (stripeSize / (20L * numColumns));
-    estBufferSize = getClosestBufferSize(estBufferSize);
-    return estBufferSize > bs ? bs : estBufferSize;
+    estBufferSize = getClosestBufferSize(estBufferSize);//创建一个最近接的缓冲区
+    return estBufferSize > bs ? bs : estBufferSize;//获取bs和estBufferSize的最小值
   }
 
   /**
    * Increase the buffer size for this writer.
    * This function is internal only and should only be called by the
    * ORC file merger.
+   * 内部方法,增加缓冲区
    * @param newSize the new buffer size.
    */
   public void increaseCompressionSize(int newSize) {
@@ -221,6 +222,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     }
   }
 
+    //创建一个最近接的缓冲区
   private static int getClosestBufferSize(int estBufferSize) {
     final int kb4 = 4 * 1024;
     final int kb8 = 8 * 1024;
@@ -246,6 +248,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     }
   }
 
+    //根据压缩算法创建不同的压缩对象
   public static CompressionCodec createCodec(CompressionKind kind) {
     switch (kind) {
       case NONE:
@@ -281,6 +284,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     return false;
   }
 
+   //RowIndexEntry对象是实现类,持有一个long类型的List
   private static class RowIndexPositionRecorder implements PositionRecorder {
     private final OrcProto.RowIndexEntry.Builder builder;
 
@@ -461,7 +465,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
    * types.
    */
   private abstract static class TreeWriter {
-    protected final int id;
+    protected final int id;//表示第几列
     protected final BitFieldWriter isPresent;
     private final boolean isCompressed;
     protected final ColumnStatisticsImpl indexStatistics;
@@ -484,10 +488,10 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
 
     /**
      * Create a tree writer.
-     * @param columnId the column id of the column to write
-     * @param schema the row schema
+     * @param columnId the column id of the column to write 表示第几列
+     * @param schema the row schema 表示该列的scheme
      * @param streamFactory limited access to the Writer's data.
-     * @param nullable can the value be null?
+     * @param nullable can the value be null? 该值是否可以是null
      * @throws IOException
      */
     TreeWriter(int columnId,

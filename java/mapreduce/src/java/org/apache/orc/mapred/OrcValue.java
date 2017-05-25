@@ -37,7 +37,7 @@ import java.io.IOException;
  */
 public final class OrcValue implements Writable, JobConfigurable {
 
-  public WritableComparable value;
+  public WritableComparable value;//该value可能是复杂对象对应的WritableComparable
 
   public OrcValue(WritableComparable value) {
     this.value = value;
@@ -62,7 +62,7 @@ public final class OrcValue implements Writable, JobConfigurable {
     if (value == null) {
       TypeDescription schema =
           TypeDescription.fromString(OrcConf.MAPRED_SHUFFLE_VALUE_SCHEMA
-              .getString(conf));
+              .getString(conf));//根据value的scheme创建value对象
       value = OrcStruct.createValue(schema);
     }
   }

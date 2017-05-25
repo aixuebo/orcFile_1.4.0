@@ -294,13 +294,15 @@ public class OrcFile {
     private final Configuration configuration;
     private FileSystem fileSystemValue = null;
     private TypeDescription schema = null;
-    private long stripeSizeValue;
-    private long blockSizeValue;
-    private int rowIndexStrideValue;
-    private int bufferSizeValue;
+
+    private long stripeSizeValue;//一个段的大小
+    private long blockSizeValue;//数据块大小
+
+    private int rowIndexStrideValue;//多少行进行一次索引
+    private int bufferSizeValue;//缓冲区间
     private boolean enforceBufferSize = false;
     private boolean blockPaddingValue;
-    private CompressionKind compressValue;
+    private CompressionKind compressValue;//压缩算法
     private MemoryManager memoryManagerValue;
     private Version versionValue;
     private WriterCallback callback;

@@ -22,24 +22,28 @@ import org.apache.orc.ColumnStatistics;
 
 /**
  * Statistics for decimal columns.
+ * 对decimal类型的字段进行统计
  */
 public interface DecimalColumnStatistics extends ColumnStatistics {
 
   /**
    * Get the minimum value for the column.
    * @return the minimum value
+   * 最小值
    */
   HiveDecimal getMinimum();
 
   /**
    * Get the maximum value for the column.
    * @return the maximum value
+   * 最大值
    */
   HiveDecimal getMaximum();
 
   /**
    * Get the sum of the values of the column.
    * @return the sum
+   * 求和
    */
   HiveDecimal getSum();
 

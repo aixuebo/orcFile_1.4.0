@@ -37,6 +37,7 @@ import java.io.IOException;
 
 /**
  * An ORC output format that satisfies the org.apache.hadoop.mapreduce API.
+ * 输出的结果是key为null,value为orc编码后的文件内容
  */
 public class OrcOutputFormat<V extends Writable>
     extends FileOutputFormat<NullWritable, V> {
@@ -60,10 +61,10 @@ public class OrcOutputFormat<V extends Writable>
   @Override
   public Path getDefaultWorkFile(TaskAttemptContext context,
                                  String extension) throws IOException {
-    if (context.getConfiguration().getBoolean(SKIP_TEMP_DIRECTORY, false)) {
+    if (context.getConfiguration().getBoolean(SKIP_TEMP_DIRECTORY, false)) {//重新定义一个路径,这也是复写的意义所在
       return new Path(getOutputPath(context),
           getUniqueFile(context, getOutputName(context), extension));
-    } else {
+    } else {//正常调用父类方法
       return super.getDefaultWorkFile(context, extension);
     }
   }

@@ -50,10 +50,10 @@ public class OrcOutputFormat<V extends Writable>
     return OrcFile.writerOptions(conf)
         .version(OrcFile.Version.byName(OrcConf.WRITE_FORMAT.getString(conf)))
         .setSchema(TypeDescription.fromString(OrcConf.MAPRED_OUTPUT_SCHEMA
-            .getString(conf)))
-        .compress(CompressionKind.valueOf(OrcConf.COMPRESS.getString(conf)))
+            .getString(conf)))//设置输出的scheme
+        .compress(CompressionKind.valueOf(OrcConf.COMPRESS.getString(conf)))//设置压缩方式
         .encodingStrategy(OrcFile.EncodingStrategy.valueOf
-            (OrcConf.ENCODING_STRATEGY.getString(conf)))
+            (OrcConf.ENCODING_STRATEGY.getString(conf)))//设置编码策略
         .bloomFilterColumns(OrcConf.BLOOM_FILTER_COLUMNS.getString(conf))
         .bloomFilterFpp(OrcConf.BLOOM_FILTER_FPP.getDouble(conf))
         .blockSize(OrcConf.BLOCK_SIZE.getLong(conf))

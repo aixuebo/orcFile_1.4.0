@@ -30,15 +30,16 @@ package org.apache.orc.impl;
  *
  * NOTE: Like standard Collection implementations/arrays, this class is not
  * synchronized.
+ * 动态的int数组,存储int
  */
 public final class DynamicIntArray {
-  static final int DEFAULT_CHUNKSIZE = 8 * 1024;
-  static final int INIT_CHUNKS = 128;
+  static final int DEFAULT_CHUNKSIZE = 8 * 1024;//8k 默认每一个数据块多少个int
+  static final int INIT_CHUNKS = 128;//默认chunk数据块数量
 
-  private final int chunkSize;       // our allocation size
-  private int[][] data;              // the real data
-  private int length;                // max set element index +1
-  private int initializedChunks = 0; // the number of created chunks
+  private int[][] data;              // the real data 真正存储数据的二维数组,第一维度表示数据块数量,第二维度表示每一个数据块内字节数组
+  private int length;                // max set element index +1 最大的元素
+  private int initializedChunks = 0; // the number of created chunks//已经创建到第几个数据块了
+  private final int chunkSize;       // our allocation size 每一个数据块真实可以存储多少个int
 
   public DynamicIntArray() {
     this(DEFAULT_CHUNKSIZE);
@@ -52,6 +53,7 @@ public final class DynamicIntArray {
 
   /**
    * Ensure that the given index is valid.
+   * 增加数据块到chunkIndex个
    */
   private void grow(int chunkIndex) {
     if (chunkIndex >= initializedChunks) {
@@ -68,6 +70,7 @@ public final class DynamicIntArray {
     }
   }
 
+  //获取index对应的数据
   public int get(int index) {
     if (index >= length) {
       throw new IndexOutOfBoundsException("Index " + index +
@@ -84,7 +87,7 @@ public final class DynamicIntArray {
     int j = index % chunkSize;
     grow(i);
     if (index >= length) {
-      length = index + 1;
+      length = index + 1;//length就是最后一个index+1,即下一个位置
     }
     data[i][j] = value;
   }
@@ -99,6 +102,7 @@ public final class DynamicIntArray {
     data[i][j] += value;
   }
 
+    //向后追加一个value
   public void add(int value) {
     int i = length / chunkSize;
     int j = length % chunkSize;
@@ -125,7 +129,7 @@ public final class DynamicIntArray {
 
     sb.append('{');
     int l = length - 1;
-    for (i=0; i<l; i++) {
+    for (i=0; i<l; i++) {//将每一个int打印出来
       sb.append(get(i));
       sb.append(',');
     }
@@ -137,6 +141,6 @@ public final class DynamicIntArray {
 
   public int getSizeInBytes() {
     return 4 * initializedChunks * chunkSize;
-  }
+  }//占用内存字节数
 }
 

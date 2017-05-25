@@ -21,6 +21,7 @@ import org.apache.orc.ColumnStatistics;
 
 /**
  * Statistics for boolean columns.
+ * 统计boolean变量中true和false对应的个数
  */
 public interface BooleanColumnStatistics extends ColumnStatistics {
   long getFalseCount();

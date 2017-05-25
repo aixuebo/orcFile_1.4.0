@@ -31,18 +31,20 @@ import java.util.TreeMap;
  * A TreeMap implementation that implements Writable.
  * @param <K> the key type, which must be WritableComparable
  * @param <V> the value type, which must be WritableComparable
+ * key和value本身是WritableComparable对象
  */
 public final class OrcMap<K extends WritableComparable,
                           V extends WritableComparable>
-    extends TreeMap<K, V> implements WritableComparable<OrcMap<K,V>> {
-  private final TypeDescription keySchema;
-  private final TypeDescription valueSchema;
+    extends TreeMap<K, V> implements WritableComparable<OrcMap<K,V>> {//说明key是有顺序的
+  private final TypeDescription keySchema;//key的类型
+  private final TypeDescription valueSchema;//value的类型
 
   public OrcMap(TypeDescription schema) {
     keySchema = schema.getChildren().get(0);
     valueSchema = schema.getChildren().get(1);
   }
 
+   //将key-value 的信息写入到输出中
   @Override
   public void write(DataOutput output) throws IOException {
     output.writeInt(size());

@@ -66,7 +66,7 @@ public class SchemaEvolution {
   public SchemaEvolution(TypeDescription fileSchema,
                          TypeDescription readerSchema,
                          Reader.Options options) {
-    boolean allowMissingMetadata = options.getTolerateMissingSchema();
+    boolean allowMissingMetadata = options.getTolerateMissingSchema();//true表示容忍缺失schema
     boolean[] includedCols = options.getInclude();
     this.readerIncluded = includedCols == null ? null :
       Arrays.copyOf(includedCols, includedCols.length);
@@ -141,13 +141,13 @@ public class SchemaEvolution {
             .include(readerIncluded));
   }
 
-  // Return true iff all fields have names like _col[0-9]+
+  // Return true iff all fields have names like _col[0-9]+ false表示所有的属性都是以_col[0-9]匹配的,true表示有名字不是_col[0-9]形式的
   private boolean hasColumnNames(TypeDescription fileSchema) {
     if (fileSchema.getCategory() != TypeDescription.Category.STRUCT) {
       return true;
     }
     for (String fieldName : fileSchema.getFieldNames()) {
-      if (!missingMetadataPattern.matcher(fieldName).matches()) {
+      if (!missingMetadataPattern.matcher(fieldName).matches()) {//有一个不匹配,则都返回true
         return true;
       }
     }
@@ -465,6 +465,7 @@ public class SchemaEvolution {
     }
   }
 
+    //true表示该对象是事件对象
   private static boolean checkAcidSchema(TypeDescription type) {
     if (type.getCategory().equals(TypeDescription.Category.STRUCT)) {
       List<String> rootFields = type.getFieldNames();
@@ -478,6 +479,7 @@ public class SchemaEvolution {
   /**
    * @param typeDescr
    * @return ORC types for the ACID event based on the row's type description
+   * 创建一个事件scheme,
    */
   public static TypeDescription createEventSchema(TypeDescription typeDescr) {
     TypeDescription result = TypeDescription.createStruct()
@@ -486,7 +488,7 @@ public class SchemaEvolution {
         .addField("bucket", TypeDescription.createInt())
         .addField("rowId", TypeDescription.createLong())
         .addField("currentTransaction", TypeDescription.createLong())
-        .addField("row", typeDescr.clone());
+        .addField("row", typeDescr.clone());//事件也是包含原始的内容
     return result;
   }
 
@@ -494,6 +496,7 @@ public class SchemaEvolution {
    * Get the underlying base row from an ACID event struct.
    * @param typeDescription the ACID event schema.
    * @return the subtype for the real row
+   * 获取事件对象中原始的类型
    */
   static TypeDescription getBaseRow(TypeDescription typeDescription) {
     final int ACID_ROW_OFFSET = 5;

@@ -629,6 +629,7 @@ public class TypeDescription
     return maxId;//返回该类下面最大的ID,而不是整个树最大的ID
   }
 
+    //hive的列向量
   private ColumnVector createColumn(int maxSize) {
     switch (category) {
       case BOOLEAN:
@@ -678,16 +679,17 @@ public class TypeDescription
     }
   }
 
+    //表示hive的一个批处理
   public VectorizedRowBatch createRowBatch(int maxSize) {
     VectorizedRowBatch result;
     if (category == Category.STRUCT) {
       result = new VectorizedRowBatch(children.size(), maxSize);
       for(int i=0; i < result.cols.length; ++i) {
-        result.cols[i] = children.get(i).createColumn(maxSize);
+        result.cols[i] = children.get(i).createColumn(maxSize);//每一个列创建一个列向量
       }
     } else {
-      result = new VectorizedRowBatch(1, maxSize);
-      result.cols[0] = createColumn(maxSize);
+      result = new VectorizedRowBatch(1, maxSize);//因为就一列
+      result.cols[0] = createColumn(maxSize);//创建列向量
     }
     result.reset();
     return result;

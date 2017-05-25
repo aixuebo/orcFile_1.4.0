@@ -77,12 +77,13 @@ public class HadoopShims_2_2 implements HadoopShims {
       this.in = in;
     }
 
+      //读取len个字节,将字节的内容写入到txt中
     @Override
     public void read(Text txt, int len) throws IOException {
       int offset = 0;
-      byte[] bytes = new byte[len];
-      while (len > 0) {
-        int written = in.read(bytes, offset, len);
+      byte[] bytes = new byte[len];//用于缓存
+      while (len > 0) {//不断的读取字节,直到读取len个长度为止
+        int written = in.read(bytes, offset, len);//读取len个字节数组,存储到bytes中
         if (written < 0) {
           throw new EOFException("Can't finish read from " + in + " read "
               + (offset) + " bytes out of " + bytes.length);
@@ -90,10 +91,11 @@ public class HadoopShims_2_2 implements HadoopShims {
         len -= written;
         offset += written;
       }
-      txt.set(bytes);
+      txt.set(bytes);//读取的字节内容写入到txt中
     }
   }
 
+  //读取字节,将其内容写入到Text中
   @Override
   public TextReaderShim getTextReaderShim(InputStream in) throws IOException {
     return new BasicTextReaderShim(in);

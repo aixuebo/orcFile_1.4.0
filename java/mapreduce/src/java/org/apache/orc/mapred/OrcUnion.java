@@ -27,11 +27,12 @@ import java.io.IOException;
 
 /**
  * An in-memory representation of a union type.
+ * OrcUnion存储一组不同类型的元素集合
  */
 public final class OrcUnion implements WritableComparable<OrcUnion> {
   private byte tag;
   private WritableComparable object;
-  private final TypeDescription schema;
+  private final TypeDescription schema;//表示Union类型
 
   public OrcUnion(TypeDescription schema) {
     this.schema = schema;

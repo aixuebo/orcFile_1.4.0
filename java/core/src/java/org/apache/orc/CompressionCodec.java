@@ -23,21 +23,23 @@ import java.util.EnumSet;
 
 public interface CompressionCodec {
 
+    //通过给定枚举类型去选择合适的压缩算法
   enum Modifier {
-    /* speed/compression tradeoffs */
+    /* speed/compression tradeoffs 速度上的控制*/
     FASTEST,
     FAST,
     DEFAULT,
-    /* data sensitivity modifiers */
+    /* data sensitivity modifiers 数据上的控制*/
     TEXT,
     BINARY
   };
 
   /**
+   * 压缩
    * Compress the in buffer to the out buffer.
-   * @param in the bytes to compress
-   * @param out the uncompressed bytes
-   * @param overflow put any additional bytes here
+   * @param in the bytes to compress 输入内容
+   * @param out the uncompressed bytes 压缩后的输出
+   * @param overflow put any additional bytes here 如果压缩后的输出out装不下内容,则向overflow内继续输出压缩后内容
    * @return true if the output is smaller than input
    * @throws IOException
    */
@@ -45,9 +47,10 @@ public interface CompressionCodec {
                   ) throws IOException;
 
   /**
+   * 解压缩
    * Decompress the in buffer to the out buffer.
-   * @param in the bytes to decompress
-   * @param out the decompressed bytes
+   * @param in the bytes to decompress 压缩文件
+   * @param out the decompressed bytes 解压缩后输出的文件
    * @throws IOException
    */
   void decompress(ByteBuffer in, ByteBuffer out) throws IOException;
@@ -61,6 +64,7 @@ public interface CompressionCodec {
    * are possible.
    * @param modifiers compression modifiers (nullable)
    * @return codec for use after optional modification
+   * 通过给定枚举类型去选择合适的压缩算法
    */
   CompressionCodec modify(EnumSet<Modifier> modifiers);
 

@@ -57,8 +57,8 @@ public class OrcMapredRecordWriter<V extends Writable>
     implements RecordWriter<NullWritable, V> {
   private final Writer writer;
   private final VectorizedRowBatch batch;
-  private final TypeDescription schema;
-  private final boolean isTopStruct;
+  private final TypeDescription schema;//输出的scheme
+  private final boolean isTopStruct;//true表示是STRUCT
 
   public OrcMapredRecordWriter(Writer writer) {
     this.writer = writer;
@@ -67,6 +67,9 @@ public class OrcMapredRecordWriter<V extends Writable>
     isTopStruct = schema.getCategory() == TypeDescription.Category.STRUCT;
   }
 
+    /**
+     * 将value具体的值添加到该列的ColumnVector向量中,row表示该value是第几行的数据
+     */
   static void setLongValue(ColumnVector vector, int row, long value) {
     ((LongColumnVector) vector).vector[row] = value;
   }
@@ -153,10 +156,11 @@ public class OrcMapredRecordWriter<V extends Writable>
     }
   }
 
-  static void setMapValue(TypeDescription schema,
+  static void setMapValue(TypeDescription schema,//该map的scheme,可以获取数据key和value的类型
                           MapColumnVector vector,
                           int row,
-                          OrcMap<?,?> value) {
+                          OrcMap<?,?> value) {//value是具体的值
+      //获取key和value类型
     TypeDescription keyType = schema.getChildren().get(0);
     TypeDescription valueType = schema.getChildren().get(1);
     vector.offsets[row] = vector.childCount;
@@ -174,13 +178,20 @@ public class OrcMapredRecordWriter<V extends Writable>
     }
   }
 
+    /**
+     * 设置值
+     * @param schema 准备设置值的字段的scheme类型
+     * @param vector 该值向哪个列向量存储数据
+     * @param row 第几行数据
+     * @param value 具体的要写入的信息
+     */
   public static void setColumn(TypeDescription schema,
                                ColumnVector vector,
                                int row,
                                Writable value) {
     if (value == null) {
-      vector.noNulls = false;
-      vector.isNull[row] = true;
+      vector.noNulls = false;//说明有null存在了
+      vector.isNull[row] = true;//说明该行数据为null
     } else {
       switch (schema.getCategory()) {
         case BOOLEAN:
@@ -249,7 +260,7 @@ public class OrcMapredRecordWriter<V extends Writable>
   @Override
   public void write(NullWritable nullWritable, V v) throws IOException {
     // if the batch is full, write it out.
-    if (batch.size == batch.getMaxSize()) {
+    if (batch.size == batch.getMaxSize()) {//说明批处理已经满了
       writer.addRowBatch(batch);
       batch.reset();
     }

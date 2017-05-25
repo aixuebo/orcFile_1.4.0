@@ -48,9 +48,9 @@ class ZeroCopyShims {
     private final FSDataInputStream in;
     private final ByteBufferPoolAdapter pool;
     private final static EnumSet<ReadOption> CHECK_SUM = EnumSet
-        .noneOf(ReadOption.class);
+        .noneOf(ReadOption.class);//需要校验和
     private final static EnumSet<ReadOption> NO_CHECK_SUM = EnumSet
-        .of(ReadOption.SKIP_CHECKSUMS);
+        .of(ReadOption.SKIP_CHECKSUMS);//不需要校验和
 
     public ZeroCopyAdapter(FSDataInputStream in,
                            HadoopShims.ByteBufferPoolShim poolshim) {

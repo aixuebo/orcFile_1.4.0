@@ -26,15 +26,18 @@ import java.io.IOException;
  * literal vint values follow.
  */
 public class RunLengthIntegerWriter implements IntegerWriter {
-  static final int MIN_REPEAT_SIZE = 3;
+  static final int MIN_REPEAT_SIZE = 3;//最小重复数量
+
+  //两个差的区间范围
   static final int MAX_DELTA = 127;
   static final int MIN_DELTA = -128;
+
   static final int MAX_LITERAL_SIZE = 128;
   private static final int MAX_REPEAT_SIZE = 127 + MIN_REPEAT_SIZE;
   private final PositionedOutputStream output;
   private final boolean signed;
-  private final long[] literals = new long[MAX_LITERAL_SIZE];
-  private int numLiterals = 0;
+  private final long[] literals = new long[MAX_LITERAL_SIZE];//每一个int值存储集合
+  private int numLiterals = 0;//多少个int值
   private long delta = 0;
   private boolean repeat = false;
   private int tailRunLength = 0;
@@ -81,7 +84,7 @@ public class RunLengthIntegerWriter implements IntegerWriter {
 
   @Override
   public void write(long value) throws IOException {
-    if (numLiterals == 0) {
+    if (numLiterals == 0) {//说明第一次添加值
       literals[numLiterals++] = value;
       tailRunLength = 1;
     } else if (repeat) {
@@ -97,17 +100,17 @@ public class RunLengthIntegerWriter implements IntegerWriter {
       }
     } else {
       if (tailRunLength == 1) {
-        delta = value - literals[numLiterals - 1];
-        if (delta < MIN_DELTA || delta > MAX_DELTA) {
-          tailRunLength = 1;
+        delta = value - literals[numLiterals - 1];//两个int做差
+        if (delta < MIN_DELTA || delta > MAX_DELTA) {//不再区间
+          tailRunLength = 1;//说明还是1个
         } else {
-          tailRunLength = 2;
+          tailRunLength = 2;//在区间说明是2个,即累加1个
         }
       } else if (value == literals[numLiterals - 1] + delta) {
         tailRunLength += 1;
       } else {
-        delta = value - literals[numLiterals - 1];
-        if (delta < MIN_DELTA || delta > MAX_DELTA) {
+        delta = value - literals[numLiterals - 1];//差
+        if (delta < MIN_DELTA || delta > MAX_DELTA) {//在范围内
           tailRunLength = 1;
         } else {
           tailRunLength = 2;

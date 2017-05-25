@@ -42,10 +42,11 @@ public final class OrcCodecPool {
 
   private static final int MAX_PER_KIND = 32;
 
+  //根据压缩算法创建压缩对象
   public static CompressionCodec getCodec(CompressionKind kind) {
     if (kind == CompressionKind.NONE) return null;
     CompressionCodec codec = null;
-    List<CompressionCodec> codecList = POOL.get(kind);
+    List<CompressionCodec> codecList = POOL.get(kind);//获取压缩算法对应的压缩算法实现类
     if (codecList != null) {
       synchronized (codecList) {
         if (!codecList.isEmpty()) {
