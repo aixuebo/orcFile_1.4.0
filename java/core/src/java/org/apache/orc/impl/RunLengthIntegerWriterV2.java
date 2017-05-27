@@ -21,8 +21,10 @@ import java.io.IOException;
 
 /**
  * <p>A writer that performs light weight compression over sequence of integers.
+ * 写入一组int,并且支持轻量级的压缩
  * </p>
  * <p>There are four types of lightweight integer compression</p>
+ * 由一下4个压缩算法组成
  * <ul>
  * <li>SHORT_REPEAT</li>
  * <li>DIRECT</li>
@@ -30,7 +32,8 @@ import java.io.IOException;
  * <li>DELTA</li>
  * </ul>
  * <p>The description and format for these types are as below:
- * <b>SHORT_REPEAT:</b> Used for short repeated integer sequences.</p>
+ * 以下是压缩算法的描述
+ * <b>SHORT_REPEAT:</b> Used for short repeated integer sequences.</p>被适用于短小的重复的int
  * <ul>
  * <li>1 byte header
  * <ul>
@@ -117,12 +120,12 @@ import java.io.IOException;
  */
 public class RunLengthIntegerWriterV2 implements IntegerWriter {
 
-  public enum EncodingType {
+  public enum EncodingType {//4种压缩算法
     SHORT_REPEAT, DIRECT, PATCHED_BASE, DELTA
   }
 
   static final int MAX_SCOPE = 512;
-  static final int MIN_REPEAT = 3;
+  static final int MIN_REPEAT = 3;//最小重复次数
   private static final int MAX_SHORT_REPEAT_LENGTH = 10;
   private long prevDelta = 0;
   private int fixedRunLength = 0;
@@ -165,7 +168,6 @@ public class RunLengthIntegerWriterV2 implements IntegerWriter {
 
   private void writeValues() throws IOException {
     if (numLiterals != 0) {
-
       if (encoding.equals(EncodingType.SHORT_REPEAT)) {
         writeShortRepeatValues();
       } else if (encoding.equals(EncodingType.DIRECT)) {
@@ -175,7 +177,6 @@ public class RunLengthIntegerWriterV2 implements IntegerWriter {
       } else {
         writeDeltaValues();
       }
-
       // clear all the variables
       clear();
     }
@@ -332,6 +333,7 @@ public class RunLengthIntegerWriterV2 implements IntegerWriter {
   /**
    * Store the opcode in 2 MSB bits
    * @return opcode
+   * 补充6个bit,凑成8bit
    */
   private int getOpcode() {
     return encoding.ordinal() << 6;
@@ -375,16 +377,16 @@ public class RunLengthIntegerWriterV2 implements IntegerWriter {
     // get the value that is repeating, compute the bits and bytes required
     long repeatVal = 0;
     if (signed) {
-      repeatVal = utils.zigzagEncode(literals[0]);
+      repeatVal = utils.zigzagEncode(literals[0]);//将负数转换成正数
     } else {
       repeatVal = literals[0];
     }
 
-    final int numBitsRepeatVal = utils.findClosestNumBits(repeatVal);
+    final int numBitsRepeatVal = utils.findClosestNumBits(repeatVal);//多少位存储该value
     final int numBytesRepeatVal = numBitsRepeatVal % 8 == 0 ? numBitsRepeatVal >>> 3
         : (numBitsRepeatVal >>> 3) + 1;
 
-    // write encoding type in top 2 bits
+    // write encoding type in top 2 bits 使用2个bit组成编码方式
     int header = getOpcode();
 
     // write the number of bytes required for the value

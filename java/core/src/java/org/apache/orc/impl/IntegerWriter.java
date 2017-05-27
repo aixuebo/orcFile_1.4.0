@@ -36,6 +36,7 @@ public interface IntegerWriter {
    * Write the integer value
    * @param value
    * @throws IOException
+   * 将一个int写入到磁盘
    */
   void write(long value) throws IOException;
 
@@ -48,6 +49,7 @@ public interface IntegerWriter {
   /**
    * Estimate the amount of memory being used.
    * @return number of bytes
+   * 预估使用多少内存
    */
   long estimateMemory();
 }

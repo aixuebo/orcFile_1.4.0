@@ -27,7 +27,8 @@ import java.util.TimeZone;
 
 public final class SerializationUtils {
 
-  private final static int BUFFER_SIZE = 64;
+  private final static int BUFFER_SIZE = 64;//缓冲区大小是64个bit,即可以存储8个字节的double
+    //读写缓冲区
   private final byte[] readBuffer;
   private final byte[] writeBuffer;
 
@@ -36,40 +37,55 @@ public final class SerializationUtils {
     this.writeBuffer = new byte[BUFFER_SIZE];
   }
 
+    //算是vlong类型的写法---没有标志位,即第一个位置不是1
   public void writeVulong(OutputStream output,
                           long value) throws IOException {
     while (true) {
-      if ((value & ~0x7f) == 0) {
-        output.write((byte) value);
+      if ((value & ~0x7f) == 0) {//0x7f表示127,即二进制是7个1,即首先将7个1反转成7个0,然后与value&操作,说明不需要value的后7bit
+        //true说明就剩下最后一个字节了,而且是证正数,因为第一个bit是0,而不是1
+        output.write((byte) value);//写入该字节即可
         return;
       } else {
-        output.write((byte) (0x80 | (value & 0x7f)));
-        value >>>= 7;
+          //0x80为128,二进制是10000000,即1+7个0
+        output.write((byte) (0x80 | (value & 0x7f)));//表示首先获取value的后7位bit,然后第1个比特前追加1,说明是负数,因为long都是按照第一个bit是1时候进行处理的,说明后面的字节还是属于该long的
+        value >>>= 7;//丢弃最后7位
       }
     }
   }
 
+    //有标志位存储,即存储的第一个位置可以是1
   public void writeVslong(OutputStream output,
                           long value) throws IOException {
+      /**
+       * 1.value << 1  首先value的二进制后面追加一个0
+       * 2.value >> 63 表示表示value取消掉最后63位,剩余1位,一般都是0
+       * 3.0和1位置相互操作变成1,剩下的都变成0,因此结果就一般等于value的原始值
+       *
+       * 以上处理依然是value的原始值,那么就转换的没意义了,意义在于首位是1的时候,即value是负数
+       * 如果是负数,则第一个位置是1,因此会把首位的1删除掉,因为后面追加了一个0,因此首位就被删除掉了
+       * value >> 63 返回值是64个1
+       * 因此结果就是转换成正数
+       */
     writeVulong(output, (value << 1) ^ (value >> 63));
   }
 
-
+   //反序列化成long
   public long readVulong(InputStream in) throws IOException {
     long result = 0;
     long b;
     int offset = 0;
     do {
-      b = in.read();
+      b = in.read();//读取一个字节
       if (b == -1) {
         throw new EOFException("Reading Vulong past EOF");
       }
       result |= (0x7f & b) << offset;
       offset += 7;
-    } while (b >= 0x80);
+    } while (b >= 0x80);//只要是负数,就不断的读取
     return result;
   }
 
+    //反序列化成long
   public long readVslong(InputStream in) throws IOException {
     long result = readVulong(in);
     return (result >>> 1) ^ -(result & 1);
@@ -220,6 +236,7 @@ public final class SerializationUtils {
     return result;
   }
 
+    //固定bit位置
   public enum FixedBitSizes {
     ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, ELEVEN, TWELVE,
     THIRTEEN, FOURTEEN, FIFTEEN, SIXTEEN, SEVENTEEN, EIGHTEEN, NINETEEN,
@@ -231,9 +248,10 @@ public final class SerializationUtils {
    * Count the number of bits required to encode the given value
    * @param value
    * @return bits required to store value
+   * 计算该value需要几个bit位置可以表达
    */
   public int findClosestNumBits(long value) {
-    int count = 0;
+    int count = 0;//表示value有多少个位置表示的
     while (value != 0) {
       count++;
       value = value >>> 1;

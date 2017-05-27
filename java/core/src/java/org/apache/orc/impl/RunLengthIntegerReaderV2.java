@@ -35,13 +35,13 @@ public class RunLengthIntegerReaderV2 implements IntegerReader {
 
   private InStream input;
   private final boolean signed;
-  private final long[] literals = new long[RunLengthIntegerWriterV2.MAX_SCOPE];
+  private final long[] literals = new long[RunLengthIntegerWriterV2.MAX_SCOPE];//存储数据
   private boolean isRepeating = false;
-  private int numLiterals = 0;
-  private int used = 0;
+  private int numLiterals = 0;//literals数组中有多少个元素
+  private int used = 0;//已经消费literals元素到第几个位置了
   private final boolean skipCorrupt;
   private final SerializationUtils utils;
-  private RunLengthIntegerWriterV2.EncodingType currentEncoding;
+  private RunLengthIntegerWriterV2.EncodingType currentEncoding;//编码类型
 
   public RunLengthIntegerReaderV2(InStream input, boolean signed,
       boolean skipCorrupt) throws IOException {
@@ -51,11 +51,13 @@ public class RunLengthIntegerReaderV2 implements IntegerReader {
     this.utils = new SerializationUtils();
   }
 
-  private final static RunLengthIntegerWriterV2.EncodingType[] encodings = RunLengthIntegerWriterV2.EncodingType.values();
+  private final static RunLengthIntegerWriterV2.EncodingType[] encodings = RunLengthIntegerWriterV2.EncodingType.values();//编码类型集合
+
+    //读取一组数据集合
   private void readValues(boolean ignoreEof) throws IOException {
     // read the first 2 bits and determine the encoding type
     isRepeating = false;
-    int firstByte = input.read();
+    int firstByte = input.read();//获取第一个字节
     if (firstByte < 0) {
       if (!ignoreEof) {
         throw new EOFException("Read past end of RLE integer from " + input);
@@ -63,7 +65,8 @@ public class RunLengthIntegerReaderV2 implements IntegerReader {
       used = numLiterals = 0;
       return;
     }
-    currentEncoding = encodings[(firstByte >>> 6) & 0x03];
+    //firstByte是int,有4个字节,即32bit,首先删除最后面的6位,然后将最后面2位拿出来,去决定使用什么编码类型,即最后一个字节的前两位用于编码
+    currentEncoding = encodings[(firstByte >>> 6) & 0x03];//0x03的二进制是11,十进制就是3
     switch (currentEncoding) {
     case SHORT_REPEAT: readShortRepeatValues(firstByte); break;
     case DIRECT: readDirectValues(firstByte); break;
@@ -276,15 +279,16 @@ public class RunLengthIntegerReaderV2 implements IntegerReader {
     }
   }
 
+    //int的最后一个字节的8个比特位置说明:2个bit表示编码类型,3个bit表示size,3个bit表示len,len表示具体多少个元素
   private void readShortRepeatValues(int firstByte) throws IOException {
 
     // read the number of bytes occupied by the value
-    int size = (firstByte >>> 3) & 0x07;
+    int size = (firstByte >>> 3) & 0x07;//十进制的7,二进制的111,即获取3位比特,是第一个字节的xx111xxx中111的位置
     // #bytes are one off
     size += 1;
 
     // read the run length
-    int len = firstByte & 0x07;
+    int len = firstByte & 0x07;//读取第一个字节的最右边的3个字节
     // run lengths values are stored only after MIN_REPEAT value is met
     len += RunLengthIntegerWriterV2.MIN_REPEAT;
 
