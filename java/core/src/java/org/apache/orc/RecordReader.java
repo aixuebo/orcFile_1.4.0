@@ -33,6 +33,8 @@ public interface RecordReader extends AutoCloseable {
    * @param batch a row batch object to read into
    * @return were more rows available to read?
    * @throws java.io.IOException
+   * 读取一个行批处理,一批次的行数不是调用者能控制的
+   *
    */
   boolean nextBatch(VectorizedRowBatch batch) throws IOException;
 
@@ -41,6 +43,7 @@ public interface RecordReader extends AutoCloseable {
    * call to next().
    * @return the row number from 0 to the number of rows in the file
    * @throws java.io.IOException
+   * 返回当前行的行数
    */
   long getRowNumber() throws IOException;
 
@@ -48,6 +51,7 @@ public interface RecordReader extends AutoCloseable {
    * Get the progress of the reader through the rows.
    * @return a fraction between 0.0 and 1.0 of rows read
    * @throws java.io.IOException
+   * 获取进度
    */
   float getProgress() throws IOException;
 
@@ -59,6 +63,7 @@ public interface RecordReader extends AutoCloseable {
 
   /**
    * Seek to a particular row number.
+   * 定位到指定行位置
    */
   void seekToRow(long rowCount) throws IOException;
 }

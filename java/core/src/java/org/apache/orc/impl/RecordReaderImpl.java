@@ -938,7 +938,7 @@ public class RecordReaderImpl implements RecordReader {
 
   /**
    * Read the current stripe into memory.
-   *
+   * 将当前stripe信息读入到内存中
    * @throws IOException
    */
   private void readStripe() throws IOException {

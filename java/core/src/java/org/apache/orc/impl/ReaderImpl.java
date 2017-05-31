@@ -519,14 +519,14 @@ public class ReaderImpl implements Reader {
       buffer = ByteBuffer.allocate(readSize);
       assert buffer.position() == 0;
       file.readFully((size - readSize),
-          buffer.array(), buffer.arrayOffset(), readSize);
+          buffer.array(), buffer.arrayOffset(), readSize);//读取file文件内容到buffer缓冲数组中
       buffer.position(0);
 
       //read the PostScript
       //get length of PostScript
-      int psLen = buffer.get(readSize - 1) & 0xff;
+      int psLen = buffer.get(readSize - 1) & 0xff;//读取最后一个字节
       ensureOrcFooter(file, path, psLen, buffer);
-      int psOffset = readSize - 1 - psLen;
+      int psOffset = readSize - 1 - psLen;//进入到开始位置
       ps = extractPostScript(buffer, path, psLen, psOffset);
       bufferSize = (int) ps.getCompressionBlockSize();
       CompressionKind compressionKind = CompressionKind.valueOf(ps.getCompression().name());

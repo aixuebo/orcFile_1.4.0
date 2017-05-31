@@ -731,8 +731,8 @@ public class TreeReaderFactory {
       // Read present/isNull stream
       super.nextVector(result, isNull, batchSize);
 
-      final boolean hasNulls = !result.noNulls;
-      boolean allNulls = hasNulls;
+      final boolean hasNulls = !result.noNulls;//true 表示有null
+      boolean allNulls = hasNulls;//是否都是null
 
       if (hasNulls) {
         // conditions to ensure bounds checks skips
@@ -756,7 +756,7 @@ public class TreeReaderFactory {
             }
           }
         }
-      } else {
+      } else {//说明没有null
         // no nulls
         boolean repeating = (batchSize > 1);
         final double d1 = utils.readDouble(stream);

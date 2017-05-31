@@ -66,8 +66,8 @@ public class PhysicalFsWriter implements PhysicalWriter {
   private long adjustedStripeSize;
   private long headerLength;//orc的头文件长度
   private long stripeStart;
-  private int metadataLength;
-  private int footerLength;
+  private int metadataLength;//元数据字节长度
+  private int footerLength;//记录footer一共多少个字节
 
   public PhysicalFsWriter(FileSystem fs,
                           Path path,
@@ -185,19 +185,23 @@ public class PhysicalFsWriter implements PhysicalWriter {
     dirEntry.setFooterLength(rawWriter.getPos() - stripeStart - dataSize - indexSize);
   }
 
+    //将参数对应的元数据写入到rawWriter流中,可能有压缩的方式写入的
   @Override
   public void writeFileMetadata(OrcProto.Metadata.Builder builder) throws IOException {
-    long startPosn = rawWriter.getPos();
+    long startPosn = rawWriter.getPos();//写入前位置
+      //真正的写入操作
     OrcProto.Metadata metadata = builder.build();
     metadata.writeTo(protobufWriter);
     protobufWriter.flush();
     writer.flush();
-    this.metadataLength = (int) (rawWriter.getPos() - startPosn);
+    this.metadataLength = (int) (rawWriter.getPos() - startPosn);//记录写入后的位置-写入前的位置,即元数据多少个字节
   }
 
+    //将Footer写出到rawWriter流中
   @Override
   public void writeFileFooter(OrcProto.Footer.Builder builder) throws IOException {
-    long bodyLength = rawWriter.getPos() - metadataLength;
+    long bodyLength = rawWriter.getPos() - metadataLength;//获取非元数据的字节数量,即body的字节内容长度
+      //设置Footer内容
     builder.setContentLength(bodyLength);
     builder.setHeaderLength(headerLength);
     long startPosn = rawWriter.getPos();
@@ -205,22 +209,24 @@ public class PhysicalFsWriter implements PhysicalWriter {
     footer.writeTo(protobufWriter);
     protobufWriter.flush();
     writer.flush();
-    this.footerLength = (int) (rawWriter.getPos() - startPosn);
+    this.footerLength = (int) (rawWriter.getPos() - startPosn);//记录footer一共多少个字节
   }
 
+    //写入PostScript对象
   @Override
   public long writePostScript(OrcProto.PostScript.Builder builder) throws IOException {
+      //设置PostScript对象
     builder.setFooterLength(footerLength);
     builder.setMetadataLength(metadataLength);
     OrcProto.PostScript ps = builder.build();
     // need to write this uncompressed
     long startPosn = rawWriter.getPos();
-    ps.writeTo(rawWriter);
-    long length = rawWriter.getPos() - startPosn;
+    ps.writeTo(rawWriter);//写入PostScript对象
+    long length = rawWriter.getPos() - startPosn;//计算PostScript对象占用字节数
     if (length > 255) {
       throw new IllegalArgumentException("PostScript too large at " + length);
     }
-    rawWriter.writeByte((int)length);
+    rawWriter.writeByte((int)length);//写入一个字节,表示PostScript对象占用字节数
     return rawWriter.getPos();
   }
 
@@ -240,7 +246,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
       OrcProto.StripeInformation.Builder dirEntry) throws IOException {
     long start = rawWriter.getPos();
     int length = buffer.remaining();
-    long availBlockSpace = blockSize - (start % blockSize);
+    long availBlockSpace = blockSize - (start % blockSize);//找到可用数据块的大小
 
     // see if stripe can fit in the current hdfs block, else pad the remaining
     // space in the block
@@ -257,7 +263,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
       }
     }
     rawWriter.write(buffer.array(), buffer.arrayOffset() + buffer.position(),
-        length);
+        length);//将buffer内容写入到rawWriter中
     dirEntry.setOffset(start);
   }
 
@@ -353,6 +359,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
     writeStripeFooter(footer, dataSize, indexSize, dirEntry);
   }
 
+    //写入文件头
   @Override
   public void writeHeader() throws IOException {
     rawWriter.writeBytes(OrcFile.MAGIC);
@@ -369,6 +376,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
     return result;
   }
 
+    //写入index索引
   @Override
   public void writeIndex(StreamName name,
                          OrcProto.RowIndex.Builder index,

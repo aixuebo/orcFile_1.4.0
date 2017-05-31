@@ -56,11 +56,11 @@ public abstract class InStream extends InputStream {
   public abstract void close();
 
   public static class UncompressedStream extends InStream {
-    private List<DiskRange> bytes;
-    private long length;
-    protected long currentOffset;
-    private ByteBuffer range;
-    private int currentRange;
+    private List<DiskRange> bytes;//数据原始内容
+    private long length;//总长度
+    protected long currentOffset;//当前读取到第几个字节了
+    private ByteBuffer range;//缓冲区
+    private int currentRange;//当前处理第几个DiskRange
 
     public UncompressedStream(String name, List<DiskRange> input, long length) {
       super(name, length);
@@ -77,25 +77,26 @@ public abstract class InStream extends InputStream {
 
     @Override
     public int read() {
-      if (range == null || range.remaining() == 0) {
-        if (currentOffset == length) {
+      if (range == null || range.remaining() == 0) {//说明range没有数据了
+        if (currentOffset == length) {//说明已经读取全部数据了
           return -1;
         }
         seek(currentOffset);
       }
       currentOffset += 1;
-      return 0xff & range.get();
+      return 0xff & range.get();//从range中读取一个字节
     }
 
+      //读取length字节,读取到data数组中,返回真的读取了多少个字节
     @Override
     public int read(byte[] data, int offset, int length) {
-      if (range == null || range.remaining() == 0) {
+      if (range == null || range.remaining() == 0) {//说明缓冲区内没有数据了
         if (currentOffset == this.length) {
           return -1;
         }
         seek(currentOffset);
       }
-      int actualLength = Math.min(length, range.remaining());
+      int actualLength = Math.min(length, range.remaining());//从缓冲区中读取数据
       range.get(data, offset, actualLength);
       currentOffset += actualLength;
       return actualLength;
@@ -103,7 +104,7 @@ public abstract class InStream extends InputStream {
 
     @Override
     public int available() {
-      if (range != null && range.remaining() > 0) {
+      if (range != null && range.remaining() > 0) {//缓冲区剩余多少字节
         return range.remaining();
       }
       return (int) (length - currentOffset);
@@ -117,11 +118,13 @@ public abstract class InStream extends InputStream {
       bytes.clear();
     }
 
+      //定位到下一个位置
     @Override
     public void seek(PositionProvider index) throws IOException {
       seek(index.getNext());
     }
 
+      //定位到desired位置
     public void seek(long desired) {
       if (desired == 0 && bytes.isEmpty()) {
         return;
@@ -129,7 +132,7 @@ public abstract class InStream extends InputStream {
       int i = 0;
       for (DiskRange curRange : bytes) {
         if (curRange.getOffset() <= desired &&
-            (desired - curRange.getOffset()) < curRange.getLength()) {
+            (desired - curRange.getOffset()) < curRange.getLength()) {//说明要查找的位置在该DiskRange里面
           currentOffset = desired;
           currentRange = i;
           this.range = curRange.getData().duplicate();
@@ -353,13 +356,14 @@ public abstract class InStream extends InputStream {
           chunkLength + " bytes");
     }
 
+      //定位到参数位置
     private void seek(long desired) throws IOException {
       if (desired == 0 && bytes.isEmpty()) {
         return;
       }
       int i = 0;
       for (DiskRange range : bytes) {
-        if (range.getOffset() <= desired && desired < range.getEnd()) {
+        if (range.getOffset() <= desired && desired < range.getEnd()) {//说明参数的位置在该DiskRange内
           currentRange = i;
           compressed = range.getData().duplicate();
           int pos = compressed.position();

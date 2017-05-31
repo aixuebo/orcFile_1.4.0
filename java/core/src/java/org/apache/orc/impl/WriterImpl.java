@@ -471,7 +471,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     protected final ColumnStatisticsImpl indexStatistics;
     protected final ColumnStatisticsImpl stripeColStatistics;
     private final ColumnStatisticsImpl fileStatistics;
-    protected TreeWriter[] childrenWriters;
+    protected TreeWriter[] childrenWriters;//如果该对象是复合对象,则每一个子类型对应一个writer
     protected final RowIndexPositionRecorder rowIndexPosition;
     private final OrcProto.RowIndex.Builder rowIndex;
     private final OrcProto.RowIndexEntry.Builder rowIndexEntry;
@@ -601,7 +601,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
      */
     void writeBatch(ColumnVector vector, int offset,
                     int length) throws IOException {
-      if (vector.noNulls) {
+      if (vector.noNulls) {//说明没有null的值
         indexStatistics.increment(length);
         if (isPresent != null) {
           for (int i = 0; i < length; ++i) {
@@ -1144,8 +1144,8 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
         }
       } else {
         for(int i=0; i < length; ++i) {
-          if (vec.noNulls || !vec.isNull[i + offset]) {
-            double value = vec.vector[i + offset];
+          if (vec.noNulls || !vec.isNull[i + offset]) {//说明该位置不是null
+            double value = vec.vector[i + offset];//获取具体的值
             utils.writeDouble(stream, value);
             indexStatistics.updateDouble(value);
             if (createBloomFilter) {

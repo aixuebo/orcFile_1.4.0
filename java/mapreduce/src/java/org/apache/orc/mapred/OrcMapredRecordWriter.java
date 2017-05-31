@@ -105,18 +105,18 @@ public class OrcMapredRecordWriter<V extends Writable>
                            Text value,
                            int length) {
     // we need to trim or pad the string with spaces to required length
-    int actualLength = value.getLength();
-    if (actualLength >= length) {
+    int actualLength = value.getLength();//value真实的长度
+    if (actualLength >= length) {//截断
       setBinaryValue(vector, row, value, length);
-    } else {
+    } else {//真实的长度短
       byte[] spaces = SPACE_BUFFER.get();
-      if (length - actualLength > spaces.length) {
+      if (length - actualLength > spaces.length) {//说明容量不允许.因此扩容
         spaces = new byte[length - actualLength];
         Arrays.fill(spaces, (byte)' ');
         SPACE_BUFFER.set(spaces);
       }
       vector.setConcat(row, value.getBytes(), 0, actualLength, spaces, 0,
-          length - actualLength);
+          length - actualLength);//使用占位符补位
     }
   }
 
