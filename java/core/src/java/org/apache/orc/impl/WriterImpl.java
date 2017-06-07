@@ -357,6 +357,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
 
     /**
      * Get the next column id.
+     * 获取每一个列的唯一ID
      * @return a number from 0 to the number of columns - 1
      */
     public int getNextColumnId() {
@@ -466,22 +467,27 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
    */
   private abstract static class TreeWriter {
     protected final int id;//表示第几列
-    protected final BitFieldWriter isPresent;
+    protected final BitFieldWriter isPresent;//记录每一个下标数据是否是null
     private final boolean isCompressed;
-    protected final ColumnStatisticsImpl indexStatistics;
+
+    protected final ColumnStatisticsImpl indexStatistics;//用于更新该列的最大值和最小值等信息
     protected final ColumnStatisticsImpl stripeColStatistics;
     private final ColumnStatisticsImpl fileStatistics;
+
     protected TreeWriter[] childrenWriters;//如果该对象是复合对象,则每一个子类型对应一个writer
+
     protected final RowIndexPositionRecorder rowIndexPosition;
     private final OrcProto.RowIndex.Builder rowIndex;
     private final OrcProto.RowIndexEntry.Builder rowIndexEntry;
-    protected final BloomFilter bloomFilter;
+
+    protected final BloomFilter bloomFilter;//用于知道该字段是否有某一个long值
     protected final BloomFilterUtf8 bloomFilterUtf8;
     protected final boolean createBloomFilter;
     private final OrcProto.BloomFilterIndex.Builder bloomFilterIndex;
     private final OrcProto.BloomFilterIndex.Builder bloomFilterIndexUtf8;
     protected final OrcProto.BloomFilter.Builder bloomFilterEntry;
-    private boolean foundNulls;
+
+    private boolean foundNulls;//true表示发现了null的值
     private OutStream isPresentOutStream;
     private final List<OrcProto.StripeStatistics.Builder> stripeStatsBuilders;
     private final StreamFactory streamFactory;
@@ -598,6 +604,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
      * @param offset the first value from the vector to write
      * @param length the number of values from the vector to write
      * @throws IOException
+     * 记录每一个位置是否是null,以及统计非null元素的个数、是否有null元素
      */
     void writeBatch(ColumnVector vector, int offset,
                     int length) throws IOException {
@@ -624,9 +631,9 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
           }
         } else {
           // count the number of non-null values
-          int nonNullCount = 0;
+          int nonNullCount = 0;//非null的次数
           for(int i = 0; i < length; ++i) {
-            boolean isNull = vector.isNull[i + offset];
+            boolean isNull = vector.isNull[i + offset];//判读该值是否是null
             if (!isNull) {
               nonNullCount += 1;
             }
@@ -670,7 +677,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
         isPresent.flush();
 
         // if no nulls are found in a stream, then suppress the stream
-        if(!foundNulls) {
+        if(!foundNulls) {//说明没有null
           isPresentOutStream.suppress();
           // since isPresent bitstream is suppressed, update the index to
           // remove the positions of the isPresent stream
@@ -972,14 +979,15 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
       return result;
     }
 
+    //写入具体的值到orc文件
     @Override
     void writeBatch(ColumnVector vector, int offset,
                     int length) throws IOException {
       super.writeBatch(vector, offset, length);
       LongColumnVector vec = (LongColumnVector) vector;
-      if (vector.isRepeating) {
-        if (vector.noNulls || !vector.isNull[0]) {
-          long value = vec.vector[0];
+      if (vector.isRepeating) {//说明重复的数据
+        if (vector.noNulls || !vector.isNull[0]) {//说明该一组数据没有null
+          long value = vec.vector[0];//重复的值
           indexStatistics.updateInteger(value, length);
           if (createBloomFilter) {
             if (bloomFilter != null) {
@@ -987,15 +995,15 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
             }
             bloomFilterUtf8.addLong(value);
           }
-          for(int i=0; i < length; ++i) {
+          for(int i=0; i < length; ++i) {//将length个value存储到输出流中
             writer.write(value);
           }
         }
-      } else {
-        for(int i=0; i < length; ++i) {
-          if (vec.noNulls || !vec.isNull[i + offset]) {
-            long value = vec.vector[i + offset];
-            writer.write(value);
+      } else {//说明value的值不同
+        for(int i=0; i < length; ++i) {//循环所有的length值
+          if (vec.noNulls || !vec.isNull[i + offset]) {//说明该位置不是null
+            long value = vec.vector[i + offset];//获取具体的值
+            writer.write(value);//写入具体的值
             indexStatistics.updateInteger(value, 1);
             if (createBloomFilter) {
               if (bloomFilter != null) {

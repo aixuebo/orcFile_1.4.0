@@ -57,31 +57,38 @@ public class ReaderImpl implements Reader {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReaderImpl.class);
 
-  private static final int DIRECTORY_SIZE_GUESS = 16 * 1024;
+  private static final int DIRECTORY_SIZE_GUESS = 16 * 1024;//猜测的目录大小
 
   protected final FileSystem fileSystem;
-  private final long maxLength;
+  private final long maxLength;//文件的长度
   protected final Path path;
-  protected final org.apache.orc.CompressionKind compressionKind;
-  protected int bufferSize;
+
+  protected final org.apache.orc.CompressionKind compressionKind;//文件压缩类型
+  protected int bufferSize;//压缩的缓冲区
+
   protected OrcProto.Metadata metadata;
   private List<OrcProto.StripeStatistics> stripeStats;
   private final int metadataSize;
-  protected final List<OrcProto.Type> types;
+
+  protected final List<OrcProto.Type> types;//schema集合
   private TypeDescription schema;
+
   private final List<OrcProto.UserMetadataItem> userMetadata;
   private final List<OrcProto.ColumnStatistics> fileStats;
-  private final List<StripeInformation> stripes;
+  private final List<StripeInformation> stripes;//记录每一个stripe信息
+
   protected final int rowIndexStride;
   private final long contentLength, numberOfRows;
 
   private long deserializedSize = -1;
   protected final Configuration conf;
+
   private final List<Integer> versionList;
   private final OrcFile.WriterVersion writerVersion;
 
-  protected OrcTail tail;
+  protected OrcTail tail;//文件的尾巴对象
 
+  //表示文件中每一个stripe信息
   public static class StripeInformationImpl
       implements StripeInformation {
     private final OrcProto.StripeInformation stripe;
@@ -90,11 +97,13 @@ public class ReaderImpl implements Reader {
       this.stripe = stripe;
     }
 
+    //该strips在文件的开始位置
     @Override
     public long getOffset() {
       return stripe.getOffset();
     }
 
+    //该strips占用文件多少个字节
     @Override
     public long getLength() {
       return stripe.getDataLength() + getIndexLength() + getFooterLength();
@@ -115,6 +124,7 @@ public class ReaderImpl implements Reader {
       return stripe.getIndexLength();
     }
 
+    //该strips有多少行数据
     @Override
     public long getNumberOfRows() {
       return stripe.getNumberOfRows();
@@ -240,6 +250,7 @@ public class ReaderImpl implements Reader {
   /**
    * Ensure this is an ORC file to prevent users from trying to read text
    * files or RC files as ORC files.
+   * 确保这个是一个orc文件,即magic能对应即可
    * @param in the file being read
    * @param path the filename for error messages
    * @param psLen the postscript length
@@ -252,18 +263,18 @@ public class ReaderImpl implements Reader {
                                         ByteBuffer buffer) throws IOException {
     int magicLength = OrcFile.MAGIC.length();
     int fullLength = magicLength + 1;
-    if (psLen < fullLength || buffer.remaining() < fullLength) {
+    if (psLen < fullLength || buffer.remaining() < fullLength) {//此时出错是因为字节数组太小了,只能容下magic
       throw new FileFormatException("Malformed ORC file " + path +
           ". Invalid postscript length " + psLen);
     }
-    int offset = buffer.arrayOffset() + buffer.position() + buffer.limit() - fullLength;
+    int offset = buffer.arrayOffset() + buffer.position() + buffer.limit() - fullLength;//找到magic的开始位置,比如limit是20,当前位置是5,说明相加后为25,magic长度为3+1,则结果是21,即最后字节数组的位置存储的是magic
     byte[] array = buffer.array();
     // now look for the magic string at the end of the postscript.
-    if (!Text.decode(array, offset, magicLength).equals(OrcFile.MAGIC)) {
+    if (!Text.decode(array, offset, magicLength).equals(OrcFile.MAGIC)) {//校验magic
       // If it isn't there, this may be the 0.11.0 version of ORC.
       // Read the first 3 bytes of the file to check for the header
       byte[] header = new byte[magicLength];
-      in.readFully(0, header, 0, magicLength);
+      in.readFully(0, header, 0, magicLength);//说明版本不一样,该版本是前3个字节记录magic
       // if it isn't there, this isn't an ORC file
       if (!Text.decode(header, 0 , magicLength).equals(OrcFile.MAGIC)) {
         throw new FileFormatException("Malformed ORC file " + path +
@@ -431,6 +442,7 @@ public class ReaderImpl implements Reader {
         singleton(new BufferChunk(bb, 0)), metadataSize, codec, bufferSize));
   }
 
+  //抽取PostScript对象
   private static OrcProto.PostScript extractPostScript(ByteBuffer bb, Path path,
       int psLen, int psAbsOffset) throws IOException {
     // TODO: when PB is upgraded to 2.6, newInstance(ByteBuffer) method should be used here.
@@ -489,6 +501,7 @@ public class ReaderImpl implements Reader {
     return new OrcTail(fileTailBuilder.build(), buffer.slice(), modificationTime);
   }
 
+  //抽取文件尾部对象
   protected OrcTail extractFileTail(FileSystem fs, Path path,
       long maxFileLength) throws IOException {
     FSDataInputStream file = fs.open(path);
@@ -499,69 +512,70 @@ public class ReaderImpl implements Reader {
     try {
       // figure out the size of the file using the option or filesystem
       long size;
-      if (maxFileLength == Long.MAX_VALUE) {
+      if (maxFileLength == Long.MAX_VALUE) {//获取该文件的字节大小以及最后更新时间
         FileStatus fileStatus = fs.getFileStatus(path);
         size = fileStatus.getLen();
         modificationTime = fileStatus.getModificationTime();
-      } else {
+      } else {//说明只是获取参数指定的文件大小
         size = maxFileLength;
         modificationTime = -1;
       }
       // Anything lesser than MAGIC header cannot be valid (valid ORC file is actually around 45 bytes, this is
       // more conservative)
-      if (size <= OrcFile.MAGIC.length()) {
+      if (size <= OrcFile.MAGIC.length()) {//文件大小一定比摸要大
         throw new FileFormatException("Not a valid ORC file");
       }
-      fileTailBuilder.setFileLength(size);
+      fileTailBuilder.setFileLength(size);//设置文件的总长度
 
       //read last bytes into buffer to get PostScript
-      int readSize = (int) Math.min(size, DIRECTORY_SIZE_GUESS);
+      int readSize = (int) Math.min(size, DIRECTORY_SIZE_GUESS);//如果文件过大,没有必要全部读取,只是读取最后16k的文件即可,因为尾部信息不会超过16k
       buffer = ByteBuffer.allocate(readSize);
       assert buffer.position() == 0;
-      file.readFully((size - readSize),
+      file.readFully((size - readSize),//从size-readSize位置开始读取
           buffer.array(), buffer.arrayOffset(), readSize);//读取file文件内容到buffer缓冲数组中
       buffer.position(0);
 
       //read the PostScript
       //get length of PostScript
-      int psLen = buffer.get(readSize - 1) & 0xff;//读取最后一个字节
-      ensureOrcFooter(file, path, psLen, buffer);
-      int psOffset = readSize - 1 - psLen;//进入到开始位置
-      ps = extractPostScript(buffer, path, psLen, psOffset);
+      int psLen = buffer.get(readSize - 1) & 0xff;//读取最后一个字节--表示PostScript需要的字节长度
+      ensureOrcFooter(file, path, psLen, buffer);//确保是orc文件
+      int psOffset = readSize - 1 - psLen;//进入到开始位置---即定位到PostScript需要的开始位置
+      ps = extractPostScript(buffer, path, psLen, psOffset);//从postScript的开始位置,反序列化postScript对象
+      //通过反序列化的对象获取数据信息
       bufferSize = (int) ps.getCompressionBlockSize();
       CompressionKind compressionKind = CompressionKind.valueOf(ps.getCompression().name());
-      fileTailBuilder.setPostscriptLength(psLen).setPostscript(ps);
+      fileTailBuilder.setPostscriptLength(psLen).setPostscript(ps);//将ps对象设置到builder中
 
-      int footerSize = (int) ps.getFooterLength();
+      int footerSize = (int) ps.getFooterLength();//获取foot和metedata的字节大小
       int metadataSize = (int) ps.getMetadataLength();
 
       //check if extra bytes need to be read
-      int extra = Math.max(0, psLen + 1 + footerSize + metadataSize - readSize);
-      int tailSize = 1 + psLen + footerSize + metadataSize;
-      if (extra > 0) {
+      int extra = Math.max(0, psLen + 1 + footerSize + metadataSize - readSize);//额外字节,即开始读取的readSize不够大,还需要继续读取数据,即返回还需要读取多少个字节。+1这个1表示的是postScript的length,即最后一个字节
+      int tailSize = 1 + psLen + footerSize + metadataSize;//总字节大小
+      if (extra > 0) {//需要读取额外字节
         //more bytes need to be read, seek back to the right place and read extra bytes
-        ByteBuffer extraBuf = ByteBuffer.allocate(extra + readSize);
-        file.readFully((size - readSize - extra), extraBuf.array(),
+        ByteBuffer extraBuf = ByteBuffer.allocate(extra + readSize);//新的缓冲区
+        file.readFully((size - readSize - extra), extraBuf.array(),//先读取额外的字节,并且填充到新的缓冲区中
             extraBuf.arrayOffset() + extraBuf.position(), extra);
         extraBuf.position(extra);
         //append with already read bytes
-        extraBuf.put(buffer);
-        buffer = extraBuf;
+        extraBuf.put(buffer);//将原有字节添加到新缓冲区里
+        buffer = extraBuf;//切换缓冲区
         buffer.position(0);
         buffer.limit(tailSize);
-        readSize += extra;
-        psOffset = readSize - 1 - psLen;
-      } else {
+        readSize += extra;//设置新的字节大小
+        psOffset = readSize - 1 - psLen;//设置新的postScript开始位置
+      } else {//说明原有的缓冲区就足够了
         //footer is already in the bytes in buffer, just adjust position, length
-        buffer.position(psOffset - footerSize - metadataSize);
+        buffer.position(psOffset - footerSize - metadataSize);//设置到开始位置
         buffer.limit(buffer.position() + tailSize);
       }
 
-      buffer.mark();
-      int footerOffset = psOffset - footerSize;
+      buffer.mark();//备份此时的缓冲区的位置状态
+      int footerOffset = psOffset - footerSize;//计算footer开始位置
       buffer.position(footerOffset);
       ByteBuffer footerBuffer = buffer.slice();
-      buffer.reset();
+      buffer.reset();//位置还原
       OrcProto.Footer footer = null;
       CompressionCodec codec = OrcCodecPool.getCodec(compressionKind);
       try {

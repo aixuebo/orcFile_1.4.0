@@ -256,17 +256,18 @@ public class RecordReaderUtils {
       return new OrcIndex(indexes, bloomFilterKinds, bloomFilterIndices);
     }
 
+    //反序列化Footer对象
     @Override
     public OrcProto.StripeFooter readStripeFooter(StripeInformation stripe) throws IOException {
       if (file == null) {
         open();
       }
-      long offset = stripe.getOffset() + stripe.getIndexLength() + stripe.getDataLength();
-      int tailLength = (int) stripe.getFooterLength();
+      long offset = stripe.getOffset() + stripe.getIndexLength() + stripe.getDataLength();//获取footer的开始位置
+      int tailLength = (int) stripe.getFooterLength();//获取footer的length
 
       // read the footer
-      ByteBuffer tailBuf = ByteBuffer.allocate(tailLength);
-      file.readFully(offset, tailBuf.array(), tailBuf.arrayOffset(), tailLength);
+      ByteBuffer tailBuf = ByteBuffer.allocate(tailLength);//分配内存
+      file.readFully(offset, tailBuf.array(), tailBuf.arrayOffset(), tailLength);//读取footer的字节内容
       return OrcProto.StripeFooter.parseFrom(InStream.createCodedInputStream("footer",
           ReaderImpl.singleton(new BufferChunk(tailBuf, 0)),
           tailLength, codec, bufferSize));

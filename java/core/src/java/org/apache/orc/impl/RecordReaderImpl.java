@@ -69,23 +69,29 @@ public class RecordReaderImpl implements RecordReader {
   static final Logger LOG = LoggerFactory.getLogger(RecordReaderImpl.class);
   private static final boolean isLogDebugEnabled = LOG.isDebugEnabled();
   private static final Object UNKNOWN_VALUE = new Object();
+
   protected final Path path;
   private final long firstRow;
   private final List<StripeInformation> stripes =
       new ArrayList<StripeInformation>();
   private OrcProto.StripeFooter stripeFooter;
   private final long totalRowCount;
-  protected final TypeDescription schema;
-  private final List<OrcProto.Type> types;
+
+  protected final TypeDescription schema;//返回reader的schema
+  private final List<OrcProto.Type> types;//文件的schema集合
+
   private final int bufferSize;
   private final SchemaEvolution evolution;
   // the file included columns indexed by the file's column ids.
   private final boolean[] fileIncluded;
   private final long rowIndexStride;
-  private long rowInStripe = 0;
-  private int currentStripe = -1;
-  private long rowBaseInStripe = 0;
-  private long rowCountInStripe = 0;
+
+
+  private long rowInStripe = 0; //在当前stripe中已经执行到第几行了
+  private int currentStripe = -1;//当前读取到第几个stripe了
+  private long rowBaseInStripe = 0;//在全部file文件中该行是第几行
+  private long rowCountInStripe = 0;//当前stripe中有多少行数据
+
   private final Map<StreamName, InStream> streams =
       new HashMap<StreamName, InStream>();
   DiskRangeList bufferChunks = null;
@@ -183,7 +189,7 @@ public class RecordReaderImpl implements RecordReader {
   protected RecordReaderImpl(ReaderImpl fileReader,
                              Reader.Options options) throws IOException {
     this.writerVersion = fileReader.getWriterVersion();
-    if (options.getSchema() == null) {
+    if (options.getSchema() == null) {//说明使用文件的schema即可
       if (LOG.isInfoEnabled()) {
         LOG.info("Reader schema not provided -- using file schema " +
             fileReader.getSchema());
@@ -197,7 +203,7 @@ public class RecordReaderImpl implements RecordReader {
       evolution = new SchemaEvolution(fileReader.getSchema(),
                                       options.getSchema(),
                                       options);
-      if (LOG.isDebugEnabled() && evolution.hasConversion()) {
+      if (LOG.isDebugEnabled() && evolution.hasConversion()) {//说明该列有需要类型转换的
         LOG.debug("ORC file " + fileReader.path.toString() +
             " has data type conversion --\n" +
             "reader schema: " + options.getSchema().toString() + "\n" +
@@ -226,8 +232,8 @@ public class RecordReaderImpl implements RecordReader {
     long maxOffset = options.getMaxOffset();
     for(StripeInformation stripe: fileReader.getStripes()) {
       long stripeStart = stripe.getOffset();
-      if (offset > stripeStart) {
-        skippedRows += stripe.getNumberOfRows();
+      if (offset > stripeStart) {//说明需要的offset比该段落的开始位置大
+        skippedRows += stripe.getNumberOfRows();//说明跳过多少行
       } else if (stripeStart < maxOffset) {
         this.stripes.add(stripe);
         rows += stripe.getNumberOfRows();
@@ -290,11 +296,13 @@ public class RecordReaderImpl implements RecordReader {
     }
   }
 
+  //获取该stripe对应的StripeFooter对象
   public OrcProto.StripeFooter readStripeFooter(StripeInformation stripe
                                                 ) throws IOException {
     return dataReader.readStripeFooter(stripe);
   }
 
+  //位置---分为5个部分,在前面 在后面,在中间。以及该值就是最大值或者最小值
   enum Location {
     BEFORE, MIN, MIDDLE, MAX, AFTER
   }
@@ -326,6 +334,7 @@ public class RecordReaderImpl implements RecordReader {
 
   /**
    * Get the maximum value out of an index entry.
+   * 返回该列的最大值
    * @param index
    *          the index entry
    * @return the object for the maximum value or null if there isn't one
@@ -359,6 +368,7 @@ public class RecordReaderImpl implements RecordReader {
    * @param index
    *          the index entry
    * @return the object for the minimum value or null if there isn't one
+   * 返回该列的最小值
    */
   static Object getMin(ColumnStatistics index) {
     if (index instanceof IntegerColumnStatistics) {
@@ -387,11 +397,11 @@ public class RecordReaderImpl implements RecordReader {
   /**
    * Evaluate a predicate with respect to the statistics from the column
    * that is referenced in the predicate.
-   * @param statsProto the statistics for the column mentioned in the predicate
+   * @param statsProto the statistics for the column mentioned in the predicate 该列的统计对象
    * @param predicate the leaf predicate we need to evaluation
    * @param bloomFilter the bloom filter
    * @param writerVersion the version of software that wrote the file
-   * @param type what is the kind of this column
+   * @param type what is the kind of this column 该列的类型
    * @return the set of truth values that may be returned for the given
    *   predicate.
    */
@@ -403,6 +413,7 @@ public class RecordReaderImpl implements RecordReader {
                                            OrcFile.WriterVersion writerVersion,
                                            TypeDescription.Category type) {
     ColumnStatistics cs = ColumnStatisticsImpl.deserialize(statsProto);
+    //获取该列的最大值和最小值
     Object minValue = getMin(cs);
     Object maxValue = getMax(cs);
     // files written before ORC-135 stores timestamp wrt to local timezone causing issues with PPD.
@@ -665,7 +676,7 @@ public class RecordReaderImpl implements RecordReader {
           return obj;
         } else {
           // will only be true if the string conversion yields "true", all other values are
-          // considered false
+          // considered false仅仅字符串的值是true的时候才会返回true,其他的都死返回false
           return Boolean.valueOf(obj.toString());
         }
       case DATE:
@@ -942,7 +953,7 @@ public class RecordReaderImpl implements RecordReader {
    * @throws IOException
    */
   private void readStripe() throws IOException {
-    StripeInformation stripe = beginReadStripe();
+    StripeInformation stripe = beginReadStripe();//切换该stripe对象上
     includedRowGroups = pickRowGroups();
 
     // move forward to the first unskipped row
@@ -978,6 +989,7 @@ public class RecordReaderImpl implements RecordReader {
     return true;
   }
 
+  //切换一个stripe对象
   private StripeInformation beginReadStripe() throws IOException {
     StripeInformation stripe = stripes.get(currentStripe);
     stripeFooter = readStripeFooter(stripe);
@@ -987,7 +999,7 @@ public class RecordReaderImpl implements RecordReader {
     rowInStripe = 0;
     rowBaseInStripe = 0;
     for (int i = 0; i < currentStripe; ++i) {
-      rowBaseInStripe += stripes.get(i).getNumberOfRows();
+      rowBaseInStripe += stripes.get(i).getNumberOfRows();//计算在整个文件中他是第几行
     }
     // reset all of the indexes
     for (int i = 0; i < indexes.length; ++i) {

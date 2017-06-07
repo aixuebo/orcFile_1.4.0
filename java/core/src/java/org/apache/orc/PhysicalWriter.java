@@ -38,7 +38,7 @@ public interface PhysicalWriter {
   interface OutputReceiver {
     /**
      * Output the given buffer to the final destination
-     *
+     * 将参数字节数组输出到目标out中
      * @param buffer the buffer to output
      * @throws IOException
      */

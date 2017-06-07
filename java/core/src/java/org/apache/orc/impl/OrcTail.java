@@ -31,6 +31,7 @@ import org.apache.orc.StripeInformation;
 import org.apache.orc.StripeStatistics;
 
 // TODO: Make OrcTail implement FileMetadata or Reader interface
+//表示orc文件的尾巴,为整个ORC文件做描述信息
 public final class OrcTail {
   // postscript + footer - Serialized in OrcSplit
   private final OrcProto.FileTail fileTail;
@@ -68,14 +69,16 @@ public final class OrcTail {
     return fileTail.getPostscript();
   }
 
+  //通过记录的版本号还原
   public OrcFile.WriterVersion getWriterVersion() {
     OrcProto.PostScript ps = fileTail.getPostscript();
     return (ps.hasWriterVersion()
         ? OrcFile.WriterVersion.from(ps.getWriterVersion()) : OrcFile.WriterVersion.ORIGINAL);
   }
 
+  //还原文件的所有strips集合
   public List<StripeInformation> getStripes() {
-    List<StripeInformation> result = new ArrayList<>(fileTail.getFooter().getStripesCount());
+    List<StripeInformation> result = new ArrayList<>(fileTail.getFooter().getStripesCount());//获取该文件有多少个strips
     for (OrcProto.StripeInformation stripeProto : fileTail.getFooter().getStripesList()) {
       result.add(new ReaderImpl.StripeInformationImpl(stripeProto));
     }
@@ -121,6 +124,7 @@ public final class OrcTail {
     return (int) getPostScript().getMetadataLength();
   }
 
+  //获取元数据集合
   public List<OrcProto.Type> getTypes() {
     return getFooter().getTypesList();
   }

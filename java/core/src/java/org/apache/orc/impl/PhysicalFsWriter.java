@@ -104,7 +104,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
   private void padStripe(long indexSize, long dataSize, int footerSize) throws IOException {
     this.stripeStart = rawWriter.getPos();
     final long currentStripeSize = indexSize + dataSize + footerSize;
-    final long available = blockSize - (stripeStart % blockSize);
+    final long available = blockSize - (stripeStart % blockSize);//可用字节数
     final long overflow = currentStripeSize - adjustedStripeSize;
     final float availRatio = (float) available / (float) defaultStripeSize;
 

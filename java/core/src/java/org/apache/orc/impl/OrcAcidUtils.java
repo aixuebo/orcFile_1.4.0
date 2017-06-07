@@ -35,6 +35,7 @@ public class OrcAcidUtils {
 
   /**
    * Get the filename of the ORC ACID side file that contains the lengths
+   * 获取一个文件路径,该路径下内容包含长度等元数据信息
    * of the intermediate footers.
    * @param main the main ORC filename
    * @return the name of the side file
@@ -49,17 +50,18 @@ public class OrcAcidUtils {
    * @param deltaFile the path of the delta file
    * @return the maximum size of the file to use
    * @throws IOException
+   * 获取最后一次flush的长度
    */
   public static long getLastFlushLength(FileSystem fs,
                                         Path deltaFile) throws IOException {
     Path lengths = getSideFile(deltaFile);
     long result = Long.MAX_VALUE;
-    if(!fs.exists(lengths)) {
+    if(!fs.exists(lengths)) {//说明不存在该路径
       return result;
     }
     try (FSDataInputStream stream = fs.open(lengths)) {
       result = -1;
-      while (stream.available() > 0) {
+      while (stream.available() > 0) {//获取最后一次的长度
         result = stream.readLong();
       }
       return result;

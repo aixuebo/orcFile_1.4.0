@@ -172,11 +172,11 @@ message Type {
 }
 
 message StripeInformation {
-  optional uint64 offset = 1;
-  optional uint64 indexLength = 2;
+  optional uint64 offset = 1;//该strips在文件的开始位置
+  optional uint64 indexLength = 2;//以下三个总长度之和,表示该strips占用总文件多少个字节
   optional uint64 dataLength = 3;
   optional uint64 footerLength = 4;
-  optional uint64 numberOfRows = 5;
+  optional uint64 numberOfRows = 5;//该strips有多少行数据
 }
 
 message UserMetadataItem {
@@ -195,14 +195,15 @@ message Metadata {
 message Footer {
   optional uint64 headerLength = 1;
   optional uint64 contentLength = 2;
-  repeated StripeInformation stripes = 3;
-  repeated Type types = 4;
+  repeated StripeInformation stripes = 3;//保存一组StripeInformation集合
+  repeated Type types = 4;//保存schema元数据集合
   repeated UserMetadataItem metadata = 5;
   optional uint64 numberOfRows = 6;
   repeated ColumnStatistics statistics = 7;
   optional uint32 rowIndexStride = 8;
 }
 
+//描述压缩的类型
 enum CompressionKind {
   NONE = 0;
   ZLIB = 1;
@@ -213,9 +214,10 @@ enum CompressionKind {
 }
 
 // Serialized length must be less that 255 bytes
+//必须一个字节内表示该对象
 message PostScript {
   optional uint64 footerLength = 1;
-  optional CompressionKind compression = 2;
+  optional CompressionKind compression = 2;//保存文件内容的压缩方式
   optional uint64 compressionBlockSize = 3;
   // the version of the file format
   //   [0, 11] = Hive 0.11
@@ -232,14 +234,29 @@ message PostScript {
   //   6 = ORC-135 fixed
   optional uint32 writerVersion = 6;
   // Leave this last in the record
-  optional string magic = 8000;
+  optional string magic = 8000;//记录在最后
 }
 
-// The contents of the file tail that must be serialized.
+// The contents of the file tail that must be serialized.文件尾部的内容,必须序列化
 // This gets serialized as part of OrcSplit, also used by footer cache.
+//表示文件尾巴对象
 message FileTail {
-  optional PostScript postscript = 1;
-  optional Footer footer = 2;
-  optional uint64 fileLength = 3;
-  optional uint64 postscriptLength = 4;
+  optional PostScript postscript = 1;//根据postscriptLength反序列化后的PostScript对象
+  optional Footer footer = 2;//根据PostScript对象可以获取footer的长度,从而反序列化得到footer对象
+  optional uint64 fileLength = 3;//整个文件的总长度
+  optional uint64 postscriptLength = 4;//解析最后一个字节,可以获取postScript的长度
 }
+//FileTail文件的定义
+1.最后一部分存储PostScript+ PostScript的长度,并且此时长度是一个字节就可以包含的,不允许超过一个字节
+2. PostScript的存储中最后一个部分是magic
+3.格式布局
+首先是metadata
+然后是footer
+然后是postScript
+最后一个字节是postScript占用的字节数量
+4. FileTail尾巴对象是解析后的结果
+5.反序列化过程
+a.通过获取最后一个字节,得到postScript字节长度。从而反序列化postScript对象
+该对象包含:footer的长度、压缩方式、压缩的缓冲区大小、文件format的格式、metadata的长度、
+writer的版本号、magic
+b.从而可以获取footer对象和metadata对象

@@ -31,8 +31,9 @@ import java.lang.reflect.Method;
  */
 public class HadoopShims_2_2 implements HadoopShims {
 
-  final boolean zeroCopy;
-  final boolean fastRead;
+  //以下两个变量默认是false
+  final boolean zeroCopy;//org.apache.hadoop.fs.CacheFlag该类存在,则返回true,否则是false
+  final boolean fastRead;//在zeroCopy是true的时候,有readWithKnownLength方法存在,则该属性为true
 
   HadoopShims_2_2() {
     boolean zcr = false;

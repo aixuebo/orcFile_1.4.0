@@ -37,7 +37,7 @@ public abstract class InStream extends InputStream {
   public static final int PROTOBUF_MESSAGE_MAX_LIMIT = 1024 << 20; // 1GB
 
   protected final String name;
-  protected long length;
+  protected long length;//要读取多少个字节,即总长度
 
   public InStream(String name, long length) {
     this.name = name;
@@ -55,6 +55,7 @@ public abstract class InStream extends InputStream {
   @Override
   public abstract void close();
 
+  //不需要解压缩的读取流方式
   public static class UncompressedStream extends InStream {
     private List<DiskRange> bytes;//数据原始内容
     private long length;//总长度
@@ -75,6 +76,7 @@ public abstract class InStream extends InputStream {
       range = null;
     }
 
+    //从缓冲区中读取一个字节
     @Override
     public int read() {
       if (range == null || range.remaining() == 0) {//说明range没有数据了
@@ -130,14 +132,14 @@ public abstract class InStream extends InputStream {
         return;
       }
       int i = 0;
-      for (DiskRange curRange : bytes) {
+      for (DiskRange curRange : bytes) {//循环每一个数据源
         if (curRange.getOffset() <= desired &&
             (desired - curRange.getOffset()) < curRange.getLength()) {//说明要查找的位置在该DiskRange里面
           currentOffset = desired;
           currentRange = i;
           this.range = curRange.getData().duplicate();
           int pos = range.position();
-          pos += (int)(desired - curRange.getOffset()); // this is why we duplicate
+          pos += (int)(desired - curRange.getOffset()); // this is why we duplicate 移动到参数的位置上
           this.range.position(pos);
           return;
         }
@@ -176,6 +178,7 @@ public abstract class InStream extends InputStream {
     }
   }
 
+  //读取压缩的流
   private static class CompressedStream extends InStream {
     private final List<DiskRange> bytes;
     private final int bufferSize;
@@ -431,12 +434,12 @@ public abstract class InStream extends InputStream {
   @Deprecated
   public static InStream create(String streamName,
                                 ByteBuffer[] buffers,
-                                long[] offsets,
+                                long[] offsets,//与ByteBuffer数组相对应,提供offset位置
                                 long length,
                                 CompressionCodec codec,
                                 int bufferSize) throws IOException {
     List<DiskRange> input = new ArrayList<DiskRange>(buffers.length);
-    for (int i = 0; i < buffers.length; ++i) {
+    for (int i = 0; i < buffers.length; ++i) {//将ByteBuffer数组转换成DiskRange对象
       input.add(new BufferChunk(buffers[i], offsets[i]));
     }
     return create(streamName, input, length, codec, bufferSize);
@@ -477,10 +480,10 @@ public abstract class InStream extends InputStream {
    */
   public static CodedInputStream createCodedInputStream(
       String name,
-      List<DiskRange> input,
-      long length,
-      CompressionCodec codec,
-      int bufferSize) throws IOException {
+      List<DiskRange> input,//输入的原始字节内容
+      long length,//字节流总长度
+      CompressionCodec codec,//压缩方式
+      int bufferSize) throws IOException {//压缩的缓冲区
     InStream inStream = create(name, input, length, codec, bufferSize);
     CodedInputStream codedInputStream = CodedInputStream.newInstance(inStream);
     codedInputStream.setSizeLimit(PROTOBUF_MESSAGE_MAX_LIMIT);
