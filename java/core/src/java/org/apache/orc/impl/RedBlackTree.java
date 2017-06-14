@@ -48,14 +48,15 @@ abstract class RedBlackTree {
 
   /**
    * Insert a new node into the data array, growing the array as necessary.
-   *
+   * 插入一个新的节点,新的节点有左节点和右节点两个节点值
    * @return Returns the position of the new node.
+   * left和right为左右节点值,isRed表示新创建的的左节点是否是红树
    */
   private int insert(int left, int right, boolean isRed) {
-    int position = size;
+    int position = size;//插入的位置是size位置
     size += 1;
-    setLeft(position, left, isRed);
-    setRight(position, right);
+    setLeft(position, left, isRed);//插入左节点
+    setRight(position, right);//插入右节点
     return position;
   }
 
@@ -69,6 +70,7 @@ abstract class RedBlackTree {
   /**
    * Is the given node red as opposed to black? To prevent having an extra word
    * in the data array, we just the low bit on the left child index.
+   * 看该位置的左节点是否是红色
    */
   protected boolean isRed(int position) {
     return position != NULL &&
@@ -77,6 +79,7 @@ abstract class RedBlackTree {
 
   /**
    * Set the red bit true or false.
+   * 将该位置设置成红色或者黑色
    */
   private void setRed(int position, boolean isRed) {
     int offset = position * ELEMENT_SIZE + LEFT_OFFSET;
@@ -89,6 +92,7 @@ abstract class RedBlackTree {
 
   /**
    * Get the left field of the given position.
+   * 获取该位置的左节点对应的值
    */
   protected int getLeft(int position) {
     return data.get(position * ELEMENT_SIZE + LEFT_OFFSET) >> 1;
@@ -104,10 +108,11 @@ abstract class RedBlackTree {
   /**
    * Set the left field of the given position.
    * Note that we are storing the node color in the low bit of the left pointer.
+   * 设置该位置的左节点对应的值
    */
   private void setLeft(int position, int left) {
     int offset = position * ELEMENT_SIZE + LEFT_OFFSET;
-    data.set(offset, (left << 1) | (data.get(offset) & 1));
+    data.set(offset, (left << 1) | (data.get(offset) & 1));//data.get(offset) & 1表示最后一个位,用于存储红黑
   }
 
   /**

@@ -25,10 +25,16 @@ import java.io.IOException;
 
 public class BitFieldWriter {
   private RunLengthByteWriter output;
-  private final int bitSize;
-  private byte current = 0;
-  private int bitsLeft = 8;
+  private final int bitSize;//表示一次value占用几个bit,虽然传入的value是一个int值,但是其实他不一定需要32个bit
+  private byte current = 0;//最终8个字节的内容
+  private int bitsLeft = 8;//凑够8个字节就写入一次
 
+    /**
+     *
+     * @param output
+     * @param bitSize   一般传入的时候都是1,表示该value占用几个bit
+     * @throws IOException
+     */
   public BitFieldWriter(PositionedOutputStream output,
                  int bitSize) throws IOException {
     this.output = new RunLengthByteWriter(output);
@@ -36,21 +42,22 @@ public class BitFieldWriter {
   }
 
   private void writeByte() throws IOException {
-    output.write(current);
+    output.write(current);//将current写入到输出中
     current = 0;
     bitsLeft = 8;
   }
 
   public void flush() throws IOException {
-    if (bitsLeft != 8) {
+    if (bitsLeft != 8) {//说明有数据,因此要写入
       writeByte();
     }
     output.flush();
   }
 
+    //添加一个value
   public void write(int value) throws IOException {
     int bitsToWrite = bitSize;
-    while (bitsToWrite > bitsLeft) {
+    while (bitsToWrite > bitsLeft) {//false,说明bitsLeft>bitsToWrite,即有多余的位置容纳bitsToWrite,bitsToWrite表示value需要的字节数
       // add the bits to the bottom of the current word
       current |= value >>> (bitsToWrite - bitsLeft);
       // subtract out the bits we just added
@@ -59,8 +66,9 @@ public class BitFieldWriter {
       value &= (1 << bitsToWrite) - 1;
       writeByte();
     }
-    bitsLeft -= bitsToWrite;
-    current |= value << bitsLeft;
+      //此时说明有足够的字节空间去容纳bitsToWrite
+    bitsLeft -= bitsToWrite;//减去bitsToWrite个字节
+    current |= value << bitsLeft;//value追加bitsLeft个0
     if (bitsLeft == 0) {
       writeByte();
     }

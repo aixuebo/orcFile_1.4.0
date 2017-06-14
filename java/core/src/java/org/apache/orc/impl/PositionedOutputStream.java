@@ -20,12 +20,18 @@ package org.apache.orc.impl;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ * 一个输出流,同时追加了一个随时可以记录当前输出流position位置的方法
+ */
 public abstract class PositionedOutputStream extends OutputStream {
 
   /**
    * Record the current position to the recorder.
-   * @param recorder the object that receives the position
+   * 记录当前的position,去记录到PositionRecorder中
+   * @param recorder the object that receives the position 什么对象去收集position位置
    * @throws IOException
+   * 参数是表示可以存储long类型的offset
+   * 因此该方法是说可以将当前的位置添加到PositionRecorder中去记录
    */
   public abstract void getPosition(PositionRecorder recorder
                                    ) throws IOException;
@@ -34,6 +40,7 @@ public abstract class PositionedOutputStream extends OutputStream {
    * Get the memory size currently allocated as buffer associated with this
    * stream.
    * @return the number of bytes used by buffers.
+   * 返回一个字节缓冲区的字节大小
    */
   public abstract long getBufferSize();
 }
