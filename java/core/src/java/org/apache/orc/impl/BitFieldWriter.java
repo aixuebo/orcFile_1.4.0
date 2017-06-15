@@ -37,7 +37,7 @@ public class BitFieldWriter {
      */
   public BitFieldWriter(PositionedOutputStream output,
                  int bitSize) throws IOException {
-    this.output = new RunLengthByteWriter(output);
+    this.output = new RunLengthByteWriter(output);//RunLengthByteWriter相当于进行了一层序列化操作
     this.bitSize = bitSize;
   }
 
@@ -56,24 +56,50 @@ public class BitFieldWriter {
 
     //添加一个value
   public void write(int value) throws IOException {
-    int bitsToWrite = bitSize;
-    while (bitsToWrite > bitsLeft) {//false,说明bitsLeft>bitsToWrite,即有多余的位置容纳bitsToWrite,bitsToWrite表示value需要的字节数
+    int bitsToWrite = bitSize;//表示要从value中获取多少个bit
+    while (bitsToWrite > bitsLeft) {//说明要从value获取的bit数据不能全部都存储到current中,因为current剩余的位置不够存储
+        /**
+         * 比如要从value中获取12个bit,即bitSize为12,但是bitsLeft最多也就8个bit,因此要做如下处理:
+         * 1.计算有多少个bit是不能容纳的,比如12-8=4,即4个bit不能被容纳,因此先不处理这4个.先处理能容纳的8个
+         * 即value >>> (bitsToWrite - bitsLeft); 表示value无符号的右移4个位置,即删除后面4个,前面用0补位,即假设原来是1101 1111 0011 现在变成0000 1101 1111,这样相当于只是获取了value原始的前面8个bit
+         * 2.减少从value尚未获取的bit数,即value从12bit变成4bit,即还有4bit没有被写入
+         * 3.为value更改内容,
+         * 即value已经从1101 1111 0011 因为还剩下4bit,因此变成1111,然后与value进行&操作,剩余的就是value的最后4个bit
+         */
+      //注意:value >>> (bitsToWrite - bitsLeft); 操作虽然将value做了改变,但是改变后的值,没有赋值给value,因此value还是原来的value
       // add the bits to the bottom of the current word
-      current |= value >>> (bitsToWrite - bitsLeft);
+      current |= value >>> (bitsToWrite - bitsLeft);//在步骤1操作,然后将剩余的数据与current做|处理
       // subtract out the bits we just added
-      bitsToWrite -= bitsLeft;
+      bitsToWrite -= bitsLeft;//减少从value尚未获取的bit数
       // zero out the bits above bitsToWrite
-      value &= (1 << bitsToWrite) - 1;
+      //1 << bitsToWrite 表示1后面追加bitsToWrite个0,比如bitsToWrite=3,则表示1000,然后-1,得到的结果就是bitsToWrite个1,即111
+      //该算法就是value & bitsToWrite个1进行与操作,即只是保留value的bitsToWrite个bit有意义,其他都丢弃
+      value &= (1 << bitsToWrite) - 1;//即此时value只保留了原始value的最后bitsToWrite位置----具体参见步骤3逻辑
       writeByte();
     }
+      //说明bitsLeft>bitsToWrite,即有多余的位置容纳bitsToWrite,bitsToWrite表示value需要的字节数
       //此时说明有足够的字节空间去容纳bitsToWrite
     bitsLeft -= bitsToWrite;//减去bitsToWrite个字节
-    current |= value << bitsLeft;//value追加bitsLeft个0
+    //原来bitsLeft=8,因为此时加入了一个value占用一个字节,因此bitsLeft剩余位置就是7,因此value << bitsLeft 就将value多添加7个0,比如value是1011 1001  现在就变成1000 0000
+    //而current=0初始化,因此他的所有8个bit位置都是0,参与|运算的时候,只要是1,他结果就是1,因此此时为current的最左边的一个bit赋值,因此0000 0000 | 1000 0000,因此结果刚刚取消的那个位置就被赋予value该位置的值了
+
+    /*
+     * 这块比较难理解,那么在举例一下
+     * 比如bitsToWrite是3,表示一次要写入3个bit,即value只有3个bit有用,
+     * 而bitsLeft还剩余6个,因此current此时的值是xx00 0000,即只有前两个bit有值
+     * 然后将value的3个bit写入到current中,反推的话,因为value只有3个bit,而current此时的值是xx00 0000,因此value应该变成00xx x000,这样就能把本次value的内容写入到current中了。
+     * 为了达到该目的,我们将value后面追加3个0,即先将bitsLeft从6变成6-3=3,然后追加bitsLeft个0.因此value就从xxx变成了00xx x000了
+     *
+     *
+     * 注意:value << bitsLeft操作虽然将value做了改变,但是改变后的值,没有赋值给value,因此value还是原来的value
+     */
+    current |= value << bitsLeft;//value追加bitsLeft个0,比如value是1011 1001,bitsLeft为3,即还能保存3个bit到current中,因此1011 1001变成1 1001 000
     if (bitsLeft == 0) {
       writeByte();
     }
   }
 
+    //记录当时文件的position以及此时已经写入了多少个bit在current中
   public void getPosition(PositionRecorder recorder) throws IOException {
     output.getPosition(recorder);
     recorder.addPosition(8 - bitsLeft);
