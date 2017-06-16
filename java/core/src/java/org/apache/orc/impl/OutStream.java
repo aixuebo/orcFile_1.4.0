@@ -276,7 +276,7 @@ public class OutStream extends PositionedOutputStream {
 
   /**
    * Set suppress flag
-   * 清空缓存的数据
+   * 止住这个流---清空缓存的数据
    */
   public void suppress() {
     receiver.suppress();

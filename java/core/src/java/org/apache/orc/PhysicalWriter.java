@@ -46,6 +46,7 @@ public interface PhysicalWriter {
 
     /**
      * Suppress this stream from being written to the stripe.
+     * 止住这个流
      */
     void suppress();
   }

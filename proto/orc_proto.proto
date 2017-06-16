@@ -142,6 +142,8 @@ message StripeFooter {
   optional string writerTimezone = 3;
 }
 
+//表示一个schema对应的全部类型信息,通过对该信息的反序列化,可以得到一个根节点的schema全部信息
+//该对象用于存储在Footer中
 message Type {
   enum Kind {//定义列的类型
     BOOLEAN = 0;
@@ -185,7 +187,7 @@ message UserMetadataItem {
 }
 
 message StripeStatistics {
-  repeated ColumnStatistics colStats = 1;
+  repeated ColumnStatistics colStats = 1;//每一个Stripe对应若干个ColumnStatistics统计信息,一个列对应一个ColumnStatistics,但是该列可能是复杂对象,有子对象,因此持有的是一个集合
 }
 
 message Metadata {

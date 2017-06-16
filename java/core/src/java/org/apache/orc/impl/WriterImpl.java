@@ -113,7 +113,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
   private int columnCount;
   private long rowCount = 0;
   private long rowsInStripe = 0;
-  private long rawDataSize = 0;
+  private long rawDataSize = 0;//计算锁需要存储所有数据的数据大小
   private int rowsInIndex = 0;
   private long lastFlushOffset = 0;
   private int stripesAtLastFlush = -1;
@@ -467,15 +467,17 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
    */
   private abstract static class TreeWriter {
     protected final int id;//表示第几列
-    protected final BitFieldWriter isPresent;//记录每一个下标数据是否是null
+    protected final BitFieldWriter isPresent;//记录每一个下标数据是否是null,当允许null添加的时候才有该对象,1表示非null,0表示null
     private final boolean isCompressed;
 
+    //用于不同的统计
     protected final ColumnStatisticsImpl indexStatistics;//用于更新该列的最大值和最小值等信息
-    protected final ColumnStatisticsImpl stripeColStatistics;
-    private final ColumnStatisticsImpl fileStatistics;
+    protected final ColumnStatisticsImpl stripeColStatistics;//每一个strip的统计
+    private final ColumnStatisticsImpl fileStatistics;//该文件所有的strip的统计和
 
     protected TreeWriter[] childrenWriters;//如果该对象是复合对象,则每一个子类型对应一个writer
 
+    //索引需要的对象
     protected final RowIndexPositionRecorder rowIndexPosition;
     private final OrcProto.RowIndex.Builder rowIndex;
     private final OrcProto.RowIndexEntry.Builder rowIndexEntry;
@@ -489,6 +491,8 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
 
     private boolean foundNulls;//true表示发现了null的值
     private OutStream isPresentOutStream;
+
+    //每一个Stripe对应若干个ColumnStatistics统计信息,一个列对应一个ColumnStatistics,但是该列可能是复杂对象,有子对象,因此持有的是一个集合
     private final List<OrcProto.StripeStatistics.Builder> stripeStatsBuilders;
     private final StreamFactory streamFactory;
 
@@ -507,7 +511,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
       this.streamFactory = streamFactory;
       this.isCompressed = streamFactory.isCompressed();
       this.id = columnId;
-      if (nullable) {
+      if (nullable) {//说明允许null添加,因此创建一个bit类型的对象
         isPresentOutStream = streamFactory.createStream(id,
             OrcProto.Stream.Kind.PRESENT);
         isPresent = new BitFieldWriter(isPresentOutStream, 1);
@@ -610,50 +614,51 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
                     int length) throws IOException {
       if (vector.noNulls) {//说明没有null的值
         indexStatistics.increment(length);
-        if (isPresent != null) {
+        if (isPresent != null) {//需要设置null与非null的位置
           for (int i = 0; i < length; ++i) {
-            isPresent.write(1);
+            isPresent.write(1);//全部记录为非null
           }
         }
       } else {
-        if (vector.isRepeating) {
-          boolean isNull = vector.isNull[0];
+        if (vector.isRepeating) {//全部重复
+          boolean isNull = vector.isNull[0];//是否是null
           if (isPresent != null) {
             for (int i = 0; i < length; ++i) {
-              isPresent.write(isNull ? 0 : 1);
+              isPresent.write(isNull ? 0 : 1);//记录是否是null的位置
             }
           }
           if (isNull) {
-            foundNulls = true;
-            indexStatistics.setNull();
+            foundNulls = true;//说明发现null了
+            indexStatistics.setNull();//说明有null存在
           } else {
-            indexStatistics.increment(length);
+            indexStatistics.increment(length);//记录元素数量
           }
         } else {
           // count the number of non-null values
           int nonNullCount = 0;//非null的次数
           for(int i = 0; i < length; ++i) {
             boolean isNull = vector.isNull[i + offset];//判读该值是否是null
-            if (!isNull) {
+            if (!isNull) {//说明不是null
               nonNullCount += 1;
             }
             if (isPresent != null) {
-              isPresent.write(isNull ? 0 : 1);
+              isPresent.write(isNull ? 0 : 1);//写入该位置是否是null
             }
           }
-          indexStatistics.increment(nonNullCount);
+          indexStatistics.increment(nonNullCount);//写入不是null的数量
           if (nonNullCount != length) {
-            foundNulls = true;
+            foundNulls = true;//说明发现null了
             indexStatistics.setNull();
           }
         }
       }
     }
 
+      //删除present流的信息,表示不包含present流
     private void removeIsPresentPositions() {
       for(int i=0; i < rowIndex.getEntryCount(); ++i) {
         OrcProto.RowIndexEntry.Builder entry = rowIndex.getEntryBuilder(i);
-        List<Long> positions = entry.getPositionsList();
+        List<Long> positions = entry.getPositionsList();//获取该entry包含的一组long值集合
         // bit streams use 3 positions if uncompressed, 4 if compressed
         positions = positions.subList(isCompressed ? 4 : 3, positions.size());
         entry.clearPositions();
@@ -674,13 +679,15 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     void writeStripe(OrcProto.StripeFooter.Builder builder,
                      int requiredIndexEntries) throws IOException {
       if (isPresent != null) {
-        isPresent.flush();
+        isPresent.flush();//先刷新值是否是null的小索引
 
+        //因为全都是非null的,因此没必要使用isPresentOutStream流
         // if no nulls are found in a stream, then suppress the stream
         if(!foundNulls) {//说明没有null
-          isPresentOutStream.suppress();
+          isPresentOutStream.suppress();//止住这个流
           // since isPresent bitstream is suppressed, update the index to
           // remove the positions of the isPresent stream
+          //因为isPresent流被止住了,因此从index中删除
           if (rowIndex != null) {
             removeIsPresentPositions();
           }
@@ -690,8 +697,8 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
       // merge stripe-level column statistics to file statistics and write it to
       // stripe statistics
       OrcProto.StripeStatistics.Builder stripeStatsBuilder = OrcProto.StripeStatistics.newBuilder();
-      writeStripeStatistics(stripeStatsBuilder, this);
-      stripeStatsBuilders.add(stripeStatsBuilder);
+      writeStripeStatistics(stripeStatsBuilder, this);//对该strio以及对应的子集合进行统计
+      stripeStatsBuilders.add(stripeStatsBuilder);//添加该strip所有的子集合对应的统计
 
       // reset the flag for next stripe
       foundNulls = false;
@@ -836,20 +843,20 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
                     int length) throws IOException {
       super.writeBatch(vector, offset, length);
       LongColumnVector vec = (LongColumnVector) vector;
-      if (vector.isRepeating) {
-        if (vector.noNulls || !vector.isNull[0]) {
-          int value = vec.vector[0] == 0 ? 0 : 1;
-          indexStatistics.updateBoolean(value != 0, length);
-          for(int i=0; i < length; ++i) {
+      if (vector.isRepeating) {//表示数据都是重复的
+        if (vector.noNulls || !vector.isNull[0]) {//说明数据不是null,有时候null也会被设置为1
+          int value = vec.vector[0] == 0 ? 0 : 1;//获取具体的boolean值
+          indexStatistics.updateBoolean(value != 0, length);//更新统计信息
+          for(int i=0; i < length; ++i) {//写入全部重复的数据
             writer.write(value);
           }
         }
-      } else {
-        for(int i=0; i < length; ++i) {
-          if (vec.noNulls || !vec.isNull[i + offset]) {
-            int value = vec.vector[i + offset] == 0 ? 0 : 1;
-            writer.write(value);
-            indexStatistics.updateBoolean(value != 0, 1);
+      } else {//说明数据不是重复的
+        for(int i=0; i < length; ++i) {//循环每一个数据
+          if (vec.noNulls || !vec.isNull[i + offset]) {//说明此时数据不是null
+            int value = vec.vector[i + offset] == 0 ? 0 : 1;//获取该值
+            writer.write(value);//添加到文件中
+            indexStatistics.updateBoolean(value != 0, 1);//设置统计值
           }
         }
       }
@@ -900,7 +907,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
       if (vector.isRepeating) {
         if (vector.noNulls || !vector.isNull[0]) {
           byte value = (byte) vec.vector[0];
-          indexStatistics.updateInteger(value, length);
+          indexStatistics.updateInteger(value, length);//更新统计值
           if (createBloomFilter) {
             if (bloomFilter != null) {
               bloomFilter.addLong(value);
@@ -908,7 +915,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
             bloomFilterUtf8.addLong(value);
           }
           for(int i=0; i < length; ++i) {
-            writer.write(value);
+            writer.write(value);//写入该值
           }
         }
       } else {
@@ -2564,6 +2571,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     }
   }
 
+    //向Footer对象添加type信息---type信息描述了一个schema的全部内容,从root开始描述schema内容
   private static void writeTypes(OrcProto.Footer.Builder builder,
                                  TypeDescription schema) {
     OrcProto.Type.Builder type = OrcProto.Type.newBuilder();
@@ -2681,14 +2689,16 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     }
   }
 
+  //获取存储这些原生的内容需要多少字节空间
   private long computeRawDataSize() {
     return getRawDataSize(treeWriter, schema);
   }
 
+  //获取存储这些原生的内容需要多少字节空间
   private long getRawDataSize(TreeWriter child,
                               TypeDescription schema) {
     long total = 0;
-    long numVals = child.fileStatistics.getNumberOfValues();
+    long numVals = child.fileStatistics.getNumberOfValues();//有多少个不同的值
     switch (schema.getCategory()) {
       case BOOLEAN:
       case BYTE:
@@ -2706,7 +2716,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
         // compute the overall size of strings
         StringColumnStatistics scs = (StringColumnStatistics) child.fileStatistics;
         numVals = numVals == 0 ? 1 : numVals;
-        int avgStringLen = (int) (scs.getSum() / numVals);
+        int avgStringLen = (int) (scs.getSum() / numVals);//总字节长度/多少个不同的值,换算出平均每一个字符串占用多少字节
         return numVals * JavaDataModel.get().lengthForStringOfLength(avgStringLen);
       case DECIMAL:
         return numVals * JavaDataModel.get().lengthOfDecimal();
@@ -2764,6 +2774,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     physicalWriter.writeFileMetadata(builder);
   }
 
+  //输出PostScript对象
   private long writePostScript() throws IOException {
     OrcProto.PostScript.Builder builder =
         OrcProto.PostScript.newBuilder()
@@ -2778,6 +2789,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     return physicalWriter.writePostScript(builder);
   }
 
+  //创建Footer信息
   private long writeFooter() throws IOException {
     writeMetadata();
     OrcProto.Footer.Builder builder = OrcProto.Footer.newBuilder();
@@ -2785,7 +2797,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     builder.setRowIndexStride(rowIndexStride);
     rawDataSize = computeRawDataSize();
     // serialize the types
-    writeTypes(builder, schema);
+    writeTypes(builder, schema);//向Footer信息中写入schema内容
     // add the stripe information
     for(OrcProto.StripeInformation stripe: stripes) {
       builder.addStripes(stripe);
@@ -2942,7 +2954,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     result.add(tw);
     for (TreeWriter child : tw.childrenWriters) {
       getAllColumnTreeWritersImpl(child, result);
-    }
+  }
   }
 
   @Override
