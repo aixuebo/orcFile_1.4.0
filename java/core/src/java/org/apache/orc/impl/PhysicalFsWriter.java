@@ -53,11 +53,11 @@ public class PhysicalFsWriter implements PhysicalWriter {
   private final Path path;//存储路径
   private final long blockSize;//数据块大小
   private final int bufferSize;//缓冲区
-  private final double paddingTolerance;
+  private final double paddingTolerance;//填补比例,默认5%
   private final long defaultStripeSize;
   private final CompressionKind compress;//压缩算法
   private final CompressionCodec codec;//压缩对象,根据压缩算法创建相应的压缩对象
-  private final boolean addBlockPadding;
+  private final boolean addBlockPadding;//是否填补数据
 
   // the streams that make up the current stripe
     //key排序,先按照data还是index分组排序,然后按照列的序号排序,然后是kind排序
@@ -74,7 +74,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
                           OrcFile.WriterOptions opts) throws IOException {
     this.path = path;
     this.defaultStripeSize = this.adjustedStripeSize = opts.getStripeSize();
-    this.addBlockPadding = opts.getBlockPadding();
+    this.addBlockPadding = opts.getBlockPadding();//是否填补数据
     if (opts.isEnforceBufferSize()) {
       this.bufferSize = opts.getBufferSize();
     } else {
@@ -109,7 +109,7 @@ public class PhysicalFsWriter implements PhysicalWriter {
     final long currentStripeSize = indexSize + dataSize + footerSize;//当前stripe需要的总字节
     final long available = blockSize - (stripeStart % blockSize);//可用字节数  stripeStart % blockSize 表示余数,即当前位置是整数数据块倍数后,还多写了多少个数据字节,因此用blockSize-他,就是还可以写入多少个字节
     final long overflow = currentStripeSize - adjustedStripeSize;
-    final float availRatio = (float) available / (float) defaultStripeSize;
+    final float availRatio = (float) available / (float) defaultStripeSize;//说明该数据块内可用的字节 是大于默认的stripe的
 
     if (availRatio > 0.0f && availRatio < 1.0f //表示当前stripe的信息可以放在一个默认的defaultStripeSize大小里面
         && availRatio > paddingTolerance) {//但是比例有些大,需要调整

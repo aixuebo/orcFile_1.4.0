@@ -211,7 +211,7 @@ public class RecordReaderUtils {
       ranges = readDiskRanges(file, zcr, stripe.getOffset(), ranges, false);
       long offset = 0;
       DiskRangeList range = ranges;
-      for(OrcProto.Stream stream: footer.getStreamsList()) {
+      for(OrcProto.Stream stream: footer.getStreamsList()) {//循环每一个流
         // advance to find the next range
         while (range != null && range.getEnd() <= offset) {
           range = range.next;
@@ -523,7 +523,7 @@ public class RecordReaderUtils {
         range = range.next;
         continue;
       }
-      int len = (int) (range.getEnd() - range.getOffset());
+      int len = (int) (range.getEnd() - range.getOffset());//该数据块的大小
       long off = range.getOffset();
       if (zcr != null) {
         file.seek(base + off);

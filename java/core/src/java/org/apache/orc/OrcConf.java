@@ -47,7 +47,7 @@ public enum OrcConf {
       "The ratio of base writer and delta writer in terms of STRIPE_SIZE and BUFFER_SIZE."),
   BLOCK_PADDING("orc.block.padding", "hive.exec.orc.default.block.padding",
       true,
-      "Define whether stripes should be padded to the HDFS block boundaries."),
+      "Define whether stripes should be padded to the HDFS block boundaries."),//是否stripe去填补空字节到数据块的边界
   COMPRESS("orc.compress", "hive.exec.orc.default.compress", "ZLIB",
       "Define the default compression codec for ORC file"),//输出的内容压缩方式
   WRITE_FORMAT("orc.write.format", "hive.exec.orc.write.format", "0.12",
@@ -65,16 +65,16 @@ public enum OrcConf {
       "Define the compression strategy to use while writing data.\n" +
           "This changes the compression level of higher level compression\n" +
           "codec (like ZLIB)."),
-  BLOCK_PADDING_TOLERANCE("orc.block.padding.tolerance",
-      "hive.exec.orc.block.padding.tolerance", 0.05,
+  BLOCK_PADDING_TOLERANCE("orc.block.padding.tolerance",//填补的容忍
+      "hive.exec.orc.block.padding.tolerance", 0.05,//百分比,默认5%
       "Define the tolerance for block padding as a decimal fraction of\n" +
           "stripe size (for example, the default value 0.05 is 5% of the\n" +
-          "stripe size). For the defaults of 64Mb ORC stripe and 256Mb HDFS\n" +
+          "stripe size). For the defaults of 64Mb ORC stripe and 256Mb HDFS\n" +//例如一个数据块是256M,但是一个stripe是64M,
           "blocks, the default block padding tolerance of 5% will\n" +
-          "reserve a maximum of 3.2Mb for padding within the 256Mb block.\n" +
-          "In that case, if the available size within the block is more than\n"+
+          "reserve a maximum of 3.2Mb for padding within the 256Mb block.\n" + //意味着默认按照5%算,一个64M的数据块可以最多储备3.2M的空间。
+          "In that case, if the available size within the block is more than\n"+ //在这个情况下,如果在这个数据块下可用的size如果比3.2M多,有一个很小的stripe将会插入到这空间中。
           "3.2Mb, a new smaller stripe will be inserted to fit within that\n" +
-          "space. This will make sure that no stripe written will block\n" +
+          "space. This will make sure that no stripe written will block\n" +//确保没有stripe被写入到两个数据块里面,导致的远程读取同一个数据块的问题
           " boundaries and cause remote reads within a node local task."),
   BLOOM_FILTER_FPP("orc.bloom.filter.fpp", "orc.default.bloom.fpp", 0.05,
       "Define the default false positive probability for bloom filters."),
