@@ -59,6 +59,14 @@ public class OutStream extends PositionedOutputStream {
   private long compressedBytes = 0;
   private long uncompressedBytes = 0;//已经读取了多少个未压缩的字节
 
+    /**
+     *
+     * @param name 输出流的名字,比如metadata
+     * @param bufferSize 缓冲区大小
+     * @param codec 写入HDFS的编码
+     * @param receiver 最终将数据写入到该数据流中
+     * @throws IOException
+     */
   public OutStream(String name,
                    int bufferSize,
                    CompressionCodec codec,

@@ -101,25 +101,27 @@ message BloomFilterIndex {
   repeated BloomFilter bloomFilter = 1;//持有若干个BloomFilter
 }
 
+//表示一个流,一个流由列name以及类型和字节长度组成,即一个列有多种类型存在,因此有一个Kind字段跟着
 message Stream {
   // if you add new index stream kinds, you need to make sure to update
   // StreamName to ensure it is added to the stripe in the right area
   enum Kind {
-    PRESENT = 0;
+    PRESENT = 0;//用于存储value值是否是null,即一个boolean值存储即可
     DATA = 1;
     LENGTH = 2;
     DICTIONARY_DATA = 3;
-    DICTIONARY_COUNT = 4;
+    DICTIONARY_COUNT = 4;//索引的一种形式
     SECONDARY = 5;
-    ROW_INDEX = 6;
-    BLOOM_FILTER = 7;//BloomFilterUtf8或者BloomFilter
-    BLOOM_FILTER_UTF8 = 8;//BloomFilterUtf8
+    ROW_INDEX = 6;//索引的一种形式
+    BLOOM_FILTER = 7;//BloomFilterUtf8或者BloomFilter  索引的一种形式
+    BLOOM_FILTER_UTF8 = 8;//BloomFilterUtf8 索引的一种形式
   }
-  optional Kind kind = 1;
-  optional uint32 column = 2;
-  optional uint64 length = 3;
+  optional Kind kind = 1;//列的存储的类型
+  optional uint32 column = 2;//列编号
+  optional uint64 length = 3;//该列占用的字节长度
 }
 
+//每一个列的编码方式
 message ColumnEncoding {
   enum Kind {
     DIRECT = 0;
@@ -133,13 +135,13 @@ message ColumnEncoding {
   // The encoding of the bloom filters for this column:
   //   0 or missing = none or original
   //   1            = ORC-135 (utc for timestamps)
-  optional uint32 bloomEncoding = 3;
+  optional uint32 bloomEncoding = 3;//bloom的编码方式,只有在bloom开启的时候可以使用
 }
 
 message StripeFooter {
-  repeated Stream streams = 1;
-  repeated ColumnEncoding columns = 2;
-  optional string writerTimezone = 3;
+  repeated Stream streams = 1;//该stripe中包含多少个Stream,就有多少个Stream对象
+  repeated ColumnEncoding columns = 2;//每一个列的编码方式
+  optional string writerTimezone = 3;//时区内容,比如Asia/Shanghai
 }
 
 //表示一个schema对应的全部类型信息,通过对该信息的反序列化,可以得到一个根节点的schema全部信息
@@ -173,11 +175,12 @@ message Type {
   optional uint32 scale = 6;//DECIMAL时候要定义该字段
 }
 
+//表示一个stripe
 message StripeInformation {
   optional uint64 offset = 1;//该strips在文件的开始位置
   optional uint64 indexLength = 2;//以下三个总长度之和,表示该strips占用总文件多少个字节
   optional uint64 dataLength = 3;
-  optional uint64 footerLength = 4;
+  optional uint64 footerLength = 4;//该footer的长度
   optional uint64 numberOfRows = 5;//该strips有多少行数据
 }
 
@@ -262,3 +265,25 @@ a.通过获取最后一个字节,得到postScript字节长度。从而反序列化postScript对象
 该对象包含:footer的长度、压缩方式、压缩的缓冲区大小、文件format的格式、metadata的长度、
 writer的版本号、magic
 b.从而可以获取footer对象和metadata对象
+
+
+
+一、Stripe组成---index 、data、footer
+1.每一个Stripe的统计信息为StripeInformation,记录该stripe的开始offset、index、data、footer字节长度、以及该stripe包含多少行数据
+因此可以直接读取stripe中的data数据、index等数据
+2.插入数据
+首先在StripeFooter中记录该Stripe中每一个流Stream的信息--每一个流包含的信息:列name,流类型,所占用字节大小
+该Stripe中有很多流,甚至一个列都有很多类型的流,那么以什么顺序添加到数据文件和StripeFooter中呢?
+答案:排序,先按照data还是index分组排序,然后按照列的序号排序,然后是kind排序
+即肯定先索引文件,然后数据文件,在数据或者索引文件中,都是相同列name的所有分类在一起排列
+
+将Stream的信息添加到StripeFooter对象中后,就可以将Stream代表的具体流写入到文件中,写进去的文件已经包含了具体的index和data，然后将StripeFooter对象写入到文件中。
+压缩的方式写入footer,但是index和data就直接写入,不需要再次压缩,因为index和data已经是压缩数据了
+
+期间收集Stripe的信息添加到StripeInformation中。
+
+
+总结:
+index中包含索引内容---原始内容写入,因为该内容已经是序列化后的数据
+data中包含数据内容---原始内容写入,因为该内容已经是序列化后的数据
+footer中包含index/data对应的列name、流类型、字节大小。----这部分数据要使用压缩算法进行压缩写入

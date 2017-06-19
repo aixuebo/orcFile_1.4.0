@@ -45,6 +45,7 @@ public class StreamName implements Comparable<StreamName> {
     }
   }
 
+    //排序,先按照data还是index分组排序,然后按照列的序号排序,然后是kind排序
   @Override
   public int compareTo(StreamName streamName) {
     if (streamName == null) {
@@ -73,6 +74,7 @@ public class StreamName implements Comparable<StreamName> {
     return getArea(kind);
   }
 
+    //根据类型 判断存储的是索引还是数据
   public static Area getArea(OrcProto.Stream.Kind kind) {
     switch (kind) {
       case ROW_INDEX:

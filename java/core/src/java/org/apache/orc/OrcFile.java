@@ -186,7 +186,8 @@ public class OrcFile {
 
     //压缩策略
   public enum CompressionStrategy {
-    SPEED, COMPRESSION
+    SPEED, //压缩速度
+    COMPRESSION//压缩比例
   }
 
   // unused
@@ -301,7 +302,7 @@ public class OrcFile {
     private TypeDescription schema = null;
 
     private long stripeSizeValue;//一个段的大小
-    private long blockSizeValue;//数据块大小
+    private long blockSizeValue;//数据块大小------存储在HDFS上的数据块大小
 
     private int rowIndexStrideValue;//多少行进行一次索引
     private int bufferSizeValue;//缓冲区间

@@ -46,7 +46,7 @@ public interface PhysicalWriter {
 
     /**
      * Suppress this stream from being written to the stripe.
-     * 止住这个流
+     * 止住这个流---即如何还原已经添加进去的流
      */
     void suppress();
   }
@@ -88,6 +88,7 @@ public interface PhysicalWriter {
   /**
    * Flushes the data in all the streams, spills them to disk, write out stripe
    * footer.
+   * 写入一个完整的stripe
    * @param footer Stripe footer to be updated with relevant data and written out.
    * @param dirEntry File metadata entry for the stripe, to be updated with
    *                 relevant data.
@@ -97,18 +98,21 @@ public interface PhysicalWriter {
 
   /**
    * Writes out the file metadata.
+   * 写入元数据
    * @param builder Metadata builder to finalize and write.
    */
   void writeFileMetadata(OrcProto.Metadata.Builder builder) throws IOException;
 
   /**
    * Writes out the file footer.
+   * 写入footer
    * @param builder Footer builder to finalize and write.
    */
   void writeFileFooter(OrcProto.Footer.Builder builder) throws IOException;
 
   /**
    * Writes out the postscript (including the size byte if needed).
+   * 写入postScript
    * @param builder Postscript builder to finalize and write.
    */
   long writePostScript(OrcProto.PostScript.Builder builder) throws IOException;
@@ -125,6 +129,7 @@ public interface PhysicalWriter {
 
   /**
    * Appends raw stripe data (e.g. for file merger).
+   * 追加一个原生的一个stripe字节数组,可能用于merge合并操作
    * @param stripe Stripe data buffer.
    * @param dirEntry File metadata entry for the stripe, to be updated with
    *                 relevant data.

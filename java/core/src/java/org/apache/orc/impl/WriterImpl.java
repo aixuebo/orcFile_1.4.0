@@ -298,6 +298,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     }
   }
 
+  //获取压缩方式,即对文本压缩还是对二进制数据源压缩
   CompressionCodec getCustomizedCodec(OrcProto.Stream.Kind kind) {
     // TODO: modify may create a new codec here. We want to end() it when the stream is closed,
     //       but at this point there's no close() for the stream.
@@ -313,7 +314,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
                 CompressionCodec.Modifier.TEXT));
           } else {
             result = result.modify(EnumSet.of(CompressionCodec.Modifier.DEFAULT,
-                CompressionCodec.Modifier.TEXT));
+                CompressionCodec.Modifier.TEXT));//说明数据都是文本
           }
           break;
         case LENGTH:
@@ -323,7 +324,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
         case SECONDARY:
           // easily compressed using the fastest modes
           result = result.modify(EnumSet.of(CompressionCodec.Modifier.FASTEST,
-              CompressionCodec.Modifier.BINARY));
+              CompressionCodec.Modifier.BINARY));//说明数据都是二进制
           break;
         default:
           LOG.info("Missing ORC compression modifiers for " + kind);
@@ -349,10 +350,11 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
                                   OrcProto.Stream.Kind kind
                                   ) throws IOException {
       final StreamName name = new StreamName(column, kind);
-      CompressionCodec codec = getCustomizedCodec(kind);
+      CompressionCodec codec = getCustomizedCodec(kind);//获取压缩方式,即对文本压缩还是对二进制数据源压缩
 
       return new OutStream(physicalWriter.toString(), bufferSize, codec,
-          physicalWriter.createDataStream(name));
+          physicalWriter.createDataStream(name)//创建一个缓冲区存放数据
+      );
     }
 
     /**
@@ -705,7 +707,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
 
       builder.addColumns(getEncoding());
       if (streamFactory.hasWriterTimeZone()) {
-        builder.setWriterTimezone(TimeZone.getDefault().getID());
+        builder.setWriterTimezone(TimeZone.getDefault().getID());//时区内容,比如Asia/Shanghai
       }
       if (rowIndex != null) {
         if (rowIndex.getEntryCount() != requiredIndexEntries) {
@@ -713,7 +715,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
                "index entries found: " + rowIndex.getEntryCount() + " expected: " +
                requiredIndexEntries);
         }
-        streamFactory.writeIndex(new StreamName(id, OrcProto.Stream.Kind.ROW_INDEX), rowIndex);
+        streamFactory.writeIndex(new StreamName(id, OrcProto.Stream.Kind.ROW_INDEX), rowIndex);//将索引内容写出
         rowIndex.clear();
         rowIndexEntry.clear();
       }
@@ -749,6 +751,7 @@ public class WriterImpl implements Writer, MemoryManager.Callback {
     /**
      * Get the encoding for this column.
      * @return the information about the encoding of this column
+     * 获取该列的编码方式
      */
     OrcProto.ColumnEncoding.Builder getEncoding() {
       OrcProto.ColumnEncoding.Builder builder =
