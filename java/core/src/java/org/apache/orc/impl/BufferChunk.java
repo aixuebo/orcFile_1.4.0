@@ -45,6 +45,7 @@ public class BufferChunk extends DiskRangeList {
     return chunk;
   }
 
+    //说明该区间是真的有数据内容的
   @Override
   public boolean hasData() {
     return chunk != null;

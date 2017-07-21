@@ -75,6 +75,7 @@ public class RecordReaderUtils {
    * @param version the version of the software that wrote the file
    * @param bloomFilterKinds (output) the stream kind of the bloom filters
    * @return a list of merged disk ranges to read
+   * 获取索引部分内容
    */
   static DiskRangeList planIndexReading(TypeDescription fileSchema,
                                         OrcProto.StripeFooter footer,
@@ -84,7 +85,7 @@ public class RecordReaderUtils {
                                         OrcFile.WriterVersion version,
                                         OrcProto.Stream.Kind[] bloomFilterKinds) {
     DiskRangeList.CreateHelper result = new DiskRangeList.CreateHelper();
-    List<OrcProto.Stream> streams = footer.getStreamsList();
+    List<OrcProto.Stream> streams = footer.getStreamsList();//该stripe对应的流集合
     // figure out which kind of bloom filter we want for each column
     // picks bloom_filter_utf8 if its available, otherwise bloom_filter
     if (sargColumns != null) {
@@ -136,7 +137,7 @@ public class RecordReaderUtils {
           }
         }
       }
-      offset += stream.getLength();
+      offset += stream.getLength();//累加文件的偏移量
     }
     return result.get();
   }
@@ -205,11 +206,16 @@ public class RecordReaderUtils {
       if (bloomFilterIndices == null) {
         bloomFilterIndices = new OrcProto.BloomFilterIndex[typeCount];
       }
+
+      //获取索引部分内容
       DiskRangeList ranges = planIndexReading(fileSchema, footer,
           ignoreNonUtf8BloomFilter, included, sargColumns, version,
           bloomFilterKinds);
+      //读取索引内容
       ranges = readDiskRanges(file, zcr, stripe.getOffset(), ranges, false);
       long offset = 0;
+
+      //将索引内容转换成索引对象
       DiskRangeList range = ranges;
       for(OrcProto.Stream stream: footer.getStreamsList()) {//循环每一个流
         // advance to find the next range
@@ -273,6 +279,7 @@ public class RecordReaderUtils {
           tailLength, codec, bufferSize));
     }
 
+      //读取数据内容
     @Override
     public DiskRangeList readFileData(
         DiskRangeList range, long baseOffset, boolean doForceDirect) throws IOException {
@@ -324,6 +331,7 @@ public class RecordReaderUtils {
     return new DefaultDataReader(properties);
   }
 
+    //判断那些列有null存在,则设置为true
   public static boolean[] findPresentStreamsByColumn(
       List<OrcProto.Stream> streamList, List<OrcProto.Type> types) {
     boolean[] hasNull = new boolean[types.size()];
@@ -507,6 +515,7 @@ public class RecordReaderUtils {
    * @return the bytes read for each disk range, which is the same length as
    *    ranges
    * @throws IOException
+   * 真实的填充文件内容到range中
    */
   static DiskRangeList readDiskRanges(FSDataInputStream file,
                                       HadoopShims.ZeroCopyReaderShim zcr,
@@ -519,14 +528,14 @@ public class RecordReaderUtils {
       prev = new DiskRangeList.MutateHelper(range);
     }
     while (range != null) {
-      if (range.hasData()) {
+      if (range.hasData()) {//true表示包含数据,其实DiskRange只是包含两个区间,没有真实的数据内容
         range = range.next;
         continue;
       }
       int len = (int) (range.getEnd() - range.getOffset());//该数据块的大小
       long off = range.getOffset();
       if (zcr != null) {
-        file.seek(base + off);
+        file.seek(base + off);//移动到文件的位置
         boolean hasReplaced = false;
         while (len > 0) {
           ByteBuffer partial = zcr.readBuffer(len, false);
@@ -545,7 +554,7 @@ public class RecordReaderUtils {
       } else {
         // Don't use HDFS ByteBuffer API because it has no readFully, and is buggy and pointless.
         byte[] buffer = new byte[len];
-        file.readFully((base + off), buffer, 0, buffer.length);
+        file.readFully((base + off), buffer, 0, buffer.length);//直接从file中读取数据
         ByteBuffer bb = null;
         if (doForceDirect) {
           bb = ByteBuffer.allocateDirect(len);
